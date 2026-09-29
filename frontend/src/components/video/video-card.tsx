@@ -43,6 +43,16 @@ export function VideoCard({
           title={video.title}
           thumbnailUrl={video.thumbnail_url}
           videoUrl={video.video_url}
+          eager={index < 3 && !compact}
+          sizes={
+            isList
+              ? compact
+                ? "(min-width: 640px) 144px, 112px"
+                : "(min-width: 640px) 224px, 144px"
+              : compact
+                ? "(min-width: 640px) 200px, 50vw"
+                : undefined
+          }
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-40 transition-opacity duration-500 group-hover:opacity-100" />

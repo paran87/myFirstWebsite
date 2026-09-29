@@ -2,8 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Film } from "lucide-react";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 import { resolveVideoPosterUrl } from "@/lib/thumbnail";
 
+const GRID_SIZES = "(min-width: 1280px) 400px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
+
+/**
+ * Fallback still for videos without a thumbnail: grabs an early frame from
+ * the video itself. The <video> is only mounted once the card is near the
+ * viewport and uses preload="metadata", so a grid of cards doesn't start
+ * downloading every video file at once.
+ */
 function VideoFrameStill({
   videoUrl,
   title,
@@ -13,8 +22,26 @@ function VideoFrameStill({
   title: string;
   className: string;
 }) {
+  const holderRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const holder = holderRef.current;
+    if (!holder) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(holder);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -28,9 +55,9 @@ function VideoFrameStill({
       }
     };
 
-    video.addEventListener("loadeddata", seekToPreview);
-    return () => video.removeEventListener("loadeddata", seekToPreview);
-  }, [videoUrl]);
+    video.addEventListener("loadedmetadata", seekToPreview);
+    return () => video.removeEventListener("loadedmetadata", seekToPreview);
+  }, [videoUrl, visible]);
 
   if (failed) {
     return (
@@ -42,16 +69,20 @@ function VideoFrameStill({
   }
 
   return (
-    <video
-      ref={videoRef}
-      src={`${videoUrl}#t=0.5`}
-      muted
-      playsInline
-      preload="auto"
-      aria-label={title}
-      onError={() => setFailed(true)}
-      className={`pointer-events-none ${className}`}
-    />
+    <div ref={holderRef} className="absolute inset-0 bg-surface-2">
+      {visible && (
+        <video
+          ref={videoRef}
+          src={`${videoUrl}#t=0.5`}
+          muted
+          playsInline
+          preload="metadata"
+          aria-label={title}
+          onError={() => setFailed(true)}
+          className={`pointer-events-none ${className}`}
+        />
+      )}
+    </div>
   );
 }
 
@@ -60,28 +91,29 @@ export function VideoThumbnail({
   thumbnailUrl,
   videoUrl,
   imageClassName = "object-cover transition duration-500 group-hover:scale-110",
-  priority = false,
+  eager = false,
+  sizes = GRID_SIZES,
 }: {
   title: string;
   thumbnailUrl: string | null;
   videoUrl: string;
   imageClassName?: string;
-  priority?: boolean;
+  eager?: boolean;
+  sizes?: string;
 }) {
   const { useVideoFrame, imageUrl } = resolveVideoPosterUrl(thumbnailUrl, videoUrl);
   const [imageFailed, setImageFailed] = useState(false);
 
   if (!useVideoFrame && imageUrl && !imageFailed) {
     return (
-      // Loaded directly so a thumbnail still shows when the Next.js image
-      // optimizer cannot fetch Supabase (common TLS failure on Windows).
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <OptimizedImage
         src={imageUrl}
         alt={title}
-        loading={priority ? "eager" : "lazy"}
+        sizes={sizes}
+        quality={60}
+        eager={eager}
         onError={() => setImageFailed(true)}
-        className={`absolute inset-0 h-full w-full ${imageClassName}`}
+        className={imageClassName}
       />
     );
   }

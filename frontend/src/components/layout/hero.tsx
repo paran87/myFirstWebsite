@@ -137,7 +137,7 @@ function HeroVisual() {
               src="/images/hero-metro-manila.png"
               alt="Makati skyline at golden hour"
               fill
-              priority
+              preload
               sizes="(max-width: 1024px) 70vw, 420px"
               className="object-cover"
             />

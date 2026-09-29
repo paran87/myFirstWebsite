@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PictureInPicture2, Gauge } from "lucide-react";
 import { registerVideoView } from "@/lib/api";
 import { resolveVideoPosterUrl } from "@/lib/thumbnail";
+import { optimizedImageUrl } from "@/lib/image";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -77,7 +78,7 @@ export function VideoPlayer({
       <video
         ref={videoRef}
         src={videoUrl}
-        poster={posterUrl ?? undefined}
+        poster={posterUrl ? optimizedImageUrl(posterUrl, 1280) : undefined}
         controls
         playsInline
         preload="metadata"

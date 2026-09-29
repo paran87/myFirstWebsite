@@ -3,14 +3,61 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { getImageProps } from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Download, Maximize2, X } from "lucide-react";
 import { usePhotoCatalog } from "@/components/photo/photo-catalog-context";
 import { downloadImage } from "@/lib/download";
+import { canOptimizeImage } from "@/lib/image";
 import type { Photo } from "@/lib/types";
 
 function photoHref(photo: Photo, query: string) {
   return query ? `/photo/${photo.id}?${query}` : `/photo/${photo.id}`;
+}
+
+const PREVIEW_SIZES = "(min-width: 1280px) 780px, 100vw";
+const FULLSCREEN_SIZES = "100vw";
+
+/**
+ * Responsive, resized WebP `<img>` props for a photo of unknown dimensions.
+ * The intrinsic width/height are dropped so the photo keeps its own aspect
+ * ratio; `srcSet` + `sizes` still pick a screen-appropriate file.
+ */
+function responsivePhotoProps(src: string, sizes: string, quality: 75 | 85) {
+  if (!canOptimizeImage(src)) return { src };
+  const { props } = getImageProps({ src, alt: "", width: 1920, height: 1080, sizes, quality });
+  return { src: props.src, srcSet: props.srcSet, sizes: props.sizes };
+}
+
+function PhotoImage({
+  src,
+  alt,
+  sizes,
+  quality,
+  className,
+  hidden = false,
+}: {
+  src: string;
+  alt: string;
+  sizes: string;
+  quality: 75 | 85;
+  className?: string;
+  hidden?: boolean;
+}) {
+  const [useOriginal, setUseOriginal] = useState(false);
+  const imgProps = useOriginal ? { src } : responsivePhotoProps(src, sizes, quality);
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      key={useOriginal ? "original" : "optimized"}
+      {...imgProps}
+      alt={alt}
+      aria-hidden={hidden || undefined}
+      decoding="async"
+      className={className}
+      onError={() => setUseOriginal(true)}
+    />
+  );
 }
 
 function ControlButton({
@@ -84,12 +131,22 @@ export function PhotoViewer({
   }
 
   const previewImage = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={photo.image_url} alt={photo.title} className="max-h-[70vh] w-full object-contain" />
+    <PhotoImage
+      src={photo.image_url}
+      alt={photo.title}
+      sizes={PREVIEW_SIZES}
+      quality={75}
+      className="max-h-[70vh] w-full object-contain"
+    />
   );
   const fullImage = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={photo.image_url} alt={photo.title} className="max-h-full max-w-full object-contain" />
+    <PhotoImage
+      src={photo.image_url}
+      alt={photo.title}
+      sizes={FULLSCREEN_SIZES}
+      quality={85}
+      className="max-h-full max-w-full object-contain"
+    />
   );
 
   const navButtons = (
@@ -121,14 +178,11 @@ export function PhotoViewer({
 
   return (
     <>
+      {/* Warm the cache for the neighbours at the same (resized) size. */}
       {previous && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={previous.image_url} alt="" className="hidden" aria-hidden />
+        <PhotoImage src={previous.image_url} alt="" sizes={PREVIEW_SIZES} quality={75} className="hidden" hidden />
       )}
-      {next && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={next.image_url} alt="" className="hidden" aria-hidden />
-      )}
+      {next && <PhotoImage src={next.image_url} alt="" sizes={PREVIEW_SIZES} quality={75} className="hidden" hidden />}
 
       <div className="relative overflow-hidden rounded-2xl border border-border bg-black/5 shadow-xl shadow-black/10">
         <button

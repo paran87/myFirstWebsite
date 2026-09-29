@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -37,7 +37,14 @@ export function PhotoWatchFrame({
   const [photos, setPhotos] = useState(initialPhotos);
   const [fullscreen, setFullscreen] = useState(false);
 
+  // The server already sent the unfiltered list, so skip the first fetch
+  // unless the page was opened with filters.
+  const isFirstRun = useRef(true);
+
   useEffect(() => {
+    const firstRun = isFirstRun.current;
+    isFirstRun.current = false;
+    if (firstRun && filterKey === "") return;
     let cancelled = false;
     getPhotos(listParamsFromSearch(searchParams))
       .then((result) => {

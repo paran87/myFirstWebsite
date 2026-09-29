@@ -31,7 +31,13 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (error) throw error;
     if (!data) return jsonError("Photo not found.", 404);
 
-    return jsonOk<Photo>(data as unknown as Photo, { headers: corsHeaders(request) });
+    return jsonOk<Photo>(data as unknown as Photo, {
+      headers: {
+        ...corsHeaders(request),
+        // Same short CDN cache as the list endpoints; admins always get fresh data.
+        ...(admin ? {} : { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" }),
+      },
+    });
   } catch (error) {
     return handleApiError(error);
   }

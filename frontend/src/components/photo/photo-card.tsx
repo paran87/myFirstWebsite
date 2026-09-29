@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MapPin, Eye } from "lucide-react";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 import { formatViews, formatDate } from "@/lib/format";
 import type { CatalogLayout } from "@/lib/catalog-layout";
 import type { Photo } from "@/lib/types";
@@ -47,12 +48,13 @@ export function PhotoCard({
       >
         {/* Padding creates a 4:3 box from width, so flex/grid cannot collapse it. */}
         <span className="block w-full pt-[75%]" aria-hidden />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <OptimizedImage
           src={photo.image_url}
           alt={photo.title}
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition duration-700 ease-[var(--ease-out)] group-hover:scale-110"
+          sizes={isList ? "(min-width: 640px) 192px, 128px" : compact ? "(min-width: 640px) 200px, 50vw" : "(min-width: 1280px) 400px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
+          quality={60}
+          eager={index < 3 && !compact}
+          className="object-cover transition duration-700 ease-[var(--ease-out)] group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         {photo.category?.name && (
