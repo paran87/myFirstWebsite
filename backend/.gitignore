@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# large local video/photo uploads (fallback when Supabase size limits reject)
+/storage/
+
 # production
 /build
 

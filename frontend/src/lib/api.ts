@@ -1,5 +1,7 @@
 import { apiUrl } from "@/lib/config";
-import type { Category, PaginatedResult, Video } from "@/lib/types";
+import type { Category, PaginatedResult, Photo, Video } from "@/lib/types";
+
+export type PhotoListParams = VideoListParams;
 
 export interface VideoListParams {
   page?: number;
@@ -28,6 +30,7 @@ async function request<T>(path: string, revalidateSeconds = 30): Promise<T> {
     // revalidated in the background — avoids hammering Supabase on
     // every homepage view while still surfacing new videos quickly.
     next: { revalidate: revalidateSeconds },
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!response.ok) {
@@ -38,7 +41,34 @@ async function request<T>(path: string, revalidateSeconds = 30): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getVideos(params: VideoListParams = {}): Promise<PaginatedResult<Video>> {
+export async function getVideos(params: VideoListParams = {}): Promise<PaginatedResult<Video>> {
+  const listParams = {
+    page: params.page ?? 1,
+    limit: params.limit ?? 24,
+    search: params.search,
+    city: params.city,
+    category: params.category,
+    year: params.year,
+  };
+
+  try {
+    const query = buildQuery({
+      ...listParams,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      sort: params.sort,
+    });
+    return await request<PaginatedResult<Video>>(`/videos${query}`, 30);
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getVideo(id: string): Promise<Video> {
+  return request<Video>(`/videos/${id}`, 60);
+}
+
+export async function getPhotos(params: PhotoListParams = {}): Promise<PaginatedResult<Photo>> {
   const query = buildQuery({
     page: params.page ?? 1,
     limit: params.limit ?? 24,
@@ -50,11 +80,11 @@ export function getVideos(params: VideoListParams = {}): Promise<PaginatedResult
     dateTo: params.dateTo,
     sort: params.sort,
   });
-  return request<PaginatedResult<Video>>(`/videos${query}`, 30);
+  return request<PaginatedResult<Photo>>(`/photos${query}`, 30);
 }
 
-export function getVideo(id: string): Promise<Video> {
-  return request<Video>(`/videos/${id}`, 60);
+export async function getPhoto(id: string): Promise<Photo> {
+  return request<Photo>(`/photos/${id}`, 60);
 }
 
 export function getCategories(): Promise<Category[]> {

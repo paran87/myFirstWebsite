@@ -20,6 +20,42 @@ export interface Category {
   updated_at: string;
 }
 
+export interface Photo {
+  id: string;
+  title: string;
+  description: string | null;
+
+  image_url: string;
+  storage_path: string | null;
+
+  location: string | null;
+  street: string | null;
+  barangay: string | null;
+  city: string | null;
+  province: string | null;
+  region: string | null;
+
+  latitude: number | null;
+  longitude: number | null;
+
+  recorded_at: string | null;
+  uploaded_at: string;
+  file_size_bytes: number | null;
+
+  category_id: string | null;
+  category?: Category | null;
+  tags: string[];
+
+  views: number;
+  status: VideoStatus;
+
+  created_by: string | null;
+  deleted_at: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Video {
   id: string;
   title: string;

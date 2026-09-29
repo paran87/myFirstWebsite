@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { assertServiceRoleKeyConfigured } from "@/lib/supabase/env-check";
+import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 /**
  * Service-role Supabase client. Bypasses Row Level Security entirely.
@@ -18,13 +20,12 @@ let cachedAdminClient: ReturnType<typeof createClient<Database>> | null = null;
 export function createSupabaseAdminClient() {
   if (cachedAdminClient) return cachedAdminClient;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getSupabaseUrl();
+  assertServiceRoleKeyConfigured();
+  const serviceRoleKey = getSupabaseServiceRoleKey();
 
-  if (!url || !serviceRoleKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables."
-    );
+  if (!url) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL in backend/.env.local.");
   }
 
   cachedAdminClient = createClient<Database>(url, serviceRoleKey, {

@@ -8,11 +8,13 @@ export function EmptyState({
   description?: string;
 }) {
   return (
-    <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-surface/50 py-20 text-center">
-      <Inbox className="h-9 w-9 text-muted" />
+    <div className="col-span-full flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-border bg-surface/40 py-24 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-primary-2/15 text-primary">
+        <Inbox className="h-8 w-8" />
+      </div>
       <div>
-        <p className="font-medium">{title}</p>
-        <p className="text-sm text-muted">{description}</p>
+        <p className="text-lg font-semibold">{title}</p>
+        <p className="mt-1 text-sm text-muted">{description}</p>
       </div>
     </div>
   );

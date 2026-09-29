@@ -1,8 +1,9 @@
 import { getCategories, getVideos } from "@/lib/api";
+import { CatalogTabs } from "@/components/layout/catalog-tabs";
 import { FiltersBar } from "@/components/video/filters-bar";
 import { VideoGrid } from "@/components/video/video-grid";
+import { Hero } from "@/components/layout/hero";
 import { ErrorState } from "@/components/ui/states";
-import { siteConfig } from "@/lib/config";
 import type { VideoListParams } from "@/lib/api";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -18,6 +19,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     sort: (typeof sp.sort === "string" ? sp.sort : "newest") as VideoListParams["sort"],
   };
 
+  const isFiltering = !!(params.search || params.city || params.category || params.year);
+
   const categories = await getCategories().catch(() => []);
 
   let result;
@@ -26,19 +29,34 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     result = await getVideos(params);
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Unable to load videos.";
+    result = undefined;
   }
 
   const gridKey = JSON.stringify(params);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {params.search ? `Search results for "${params.search}"` : "Street-Level Video Documentation"}
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Body-camera footage of streets and areas across Metro Manila, organized for mapping,
-          presentation, and reference. Currently showing {siteConfig.name}&rsquo;s public catalog.
+    <main className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
+      {!isFiltering && (
+        <div className="mb-8">
+          <Hero totalVideos={result?.total} totalCategories={categories.length} />
+        </div>
+      )}
+
+      <div className="page-shell p-5 sm:p-6 lg:p-8">
+      <CatalogTabs />
+
+      <div className="mb-6 mt-2 flex flex-col gap-1">
+        <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+          {params.search ? (
+            <>
+              Results for <span className="text-gradient">&ldquo;{params.search}&rdquo;</span>
+            </>
+          ) : (
+            "Latest Documentation"
+          )}
+        </h2>
+        <p className="text-base font-medium text-foreground/80">
+          {result ? `${result.total.toLocaleString()} video${result.total === 1 ? "" : "s"} available` : "Browse the public catalog"}
         </p>
       </div>
 
@@ -51,6 +69,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       ) : (
         result && <VideoGrid key={gridKey} initialResult={result} params={params} />
       )}
+      </div>
     </main>
   );
 }

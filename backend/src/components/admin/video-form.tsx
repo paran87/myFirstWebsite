@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { UploadCloud, X, Loader2, MapPin } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
-import {
-  requestSignedUploadUrl,
-  uploadFileWithProgress,
-  CLIENT_UPLOAD_LIMITS,
-} from "@/lib/upload";
+import { uploadFileWithProgress, CLIENT_UPLOAD_LIMITS } from "@/lib/upload";
+import { captureVideoThumbnailFile } from "@/lib/capture-video-thumbnail";
+import { AdminVideoThumbnail } from "@/components/admin/video-thumbnail";
+import { isGeneratedPlaceholderThumbnail } from "@/lib/thumbnail";
 import { METRO_MANILA_CITIES } from "@/lib/types";
 import type { Category, Video, VideoStatus } from "@/lib/types";
 
@@ -23,14 +22,20 @@ function readVideoMetadata(file: File): Promise<{ durationSeconds: number | null
     const url = URL.createObjectURL(file);
     const videoEl = document.createElement("video");
     videoEl.preload = "metadata";
-    videoEl.onloadedmetadata = () => {
-      const duration = Number.isFinite(videoEl.duration) ? Math.round(videoEl.duration) : null;
+    const done = (durationSeconds: number | null) => {
       URL.revokeObjectURL(url);
-      resolve({ durationSeconds: duration });
+      videoEl.removeAttribute("src");
+      resolve({ durationSeconds });
+    };
+    const timer = window.setTimeout(() => done(null), 4000);
+    videoEl.onloadedmetadata = () => {
+      window.clearTimeout(timer);
+      const duration = Number.isFinite(videoEl.duration) ? Math.round(videoEl.duration) : null;
+      done(duration);
     };
     videoEl.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve({ durationSeconds: null });
+      window.clearTimeout(timer);
+      done(null);
     };
     videoEl.src = url;
   });
@@ -55,11 +60,31 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
   const [categoryId, setCategoryId] = useState(initialVideo?.category_id ?? "");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(initialVideo?.tags ?? []);
-  const [status, setStatus] = useState<VideoStatus>(initialVideo?.status ?? "draft");
+  const [status, setStatus] = useState<VideoStatus>(initialVideo?.status ?? "published");
 
-  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(initialVideo?.thumbnail_url ?? null);
+  const initialThumb =
+    initialVideo?.thumbnail_url && !isGeneratedPlaceholderThumbnail(initialVideo.thumbnail_url)
+      ? initialVideo.thumbnail_url
+      : null;
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(initialThumb);
+  const [localVideoObjectUrl, setLocalVideoObjectUrl] = useState<string | null>(null);
+  const capturedThumbs = useRef(new WeakMap<File, File>());
+  const captureJobs = useRef(new WeakMap<File, Promise<File | null>>());
+
+  function ensureCapturedThumb(file: File): Promise<File | null> {
+    const ready = capturedThumbs.current.get(file);
+    if (ready) return Promise.resolve(ready);
+    const inflight = captureJobs.current.get(file);
+    if (inflight) return inflight;
+    const job = captureVideoThumbnailFile(file).then((frame) => {
+      if (frame) capturedThumbs.current.set(file, frame);
+      return frame;
+    });
+    captureJobs.current.set(file, job);
+    return job;
+  }
 
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [uploadStage, setUploadStage] = useState<string | null>(null);
@@ -72,6 +97,45 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
       .catch(() => toast.error("Failed to load categories."));
   }, []);
 
+  useEffect(() => {
+    const file = videoFiles[0];
+    if (!file) {
+      setLocalVideoObjectUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setLocalVideoObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [videoFiles]);
+
+  useEffect(() => {
+    if (thumbnailFile) return;
+
+    const source = videoFiles[0];
+    if (!source) {
+      if (initialThumb) setThumbnailPreview(initialThumb);
+      else setThumbnailPreview(null);
+      return;
+    }
+
+    let active = true;
+    let objectUrl: string | null = null;
+    ensureCapturedThumb(source).then((frame) => {
+      if (!active) return;
+      if (frame) {
+        objectUrl = URL.createObjectURL(frame);
+        setThumbnailPreview(objectUrl);
+      } else {
+        setThumbnailPreview(null);
+      }
+    });
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [videoFiles, thumbnailFile, initialThumb]);
+
   const cityOptions = useMemo(() => METRO_MANILA_CITIES, []);
 
   function addTag() {
@@ -80,6 +144,19 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
       setTags((t) => [...t, value]);
     }
     setTagInput("");
+  }
+
+  function videoMime(file: File): string {
+    if (file.type && file.type !== "application/octet-stream") return file.type;
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    return (
+      { webm: "video/webm", mp4: "video/mp4", mov: "video/quicktime", mkv: "video/x-matroska" }[ext] ??
+      file.type
+    );
+  }
+
+  function titleFromFileName(fileName: string): string {
+    return fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
   }
 
   function handleThumbnailChange(file: File | null) {
@@ -91,67 +168,44 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
     event.preventDefault();
     setFormError(null);
 
-    if (mode === "create" && !videoFile) {
-      setFormError("Please select a video file to upload.");
+    if (mode === "create" && videoFiles.length === 0) {
+      setFormError("Please select at least one video file to upload.");
       return;
     }
-    if (!title.trim()) {
+    if (mode === "edit" && !title.trim()) {
+      setFormError("Title is required.");
+      return;
+    }
+    if (mode === "create" && videoFiles.length === 1 && !title.trim()) {
       setFormError("Title is required.");
       return;
     }
 
     setSubmitting(true);
     try {
-      let videoUrl = initialVideo?.video_url ?? "";
-      let storagePath = initialVideo?.storage_path ?? null;
-      let thumbnailUrl = initialVideo?.thumbnail_url ?? null;
-      let thumbnailStoragePath = initialVideo?.thumbnail_storage_path ?? null;
-      let durationSeconds = initialVideo?.duration_seconds ?? null;
-      let fileSizeBytes = initialVideo?.file_size_bytes ?? null;
-
-      if (videoFile) {
-        if (videoFile.size > CLIENT_UPLOAD_LIMITS.maxVideoMb * 1024 * 1024) {
-          throw new Error(`Video exceeds the ${CLIENT_UPLOAD_LIMITS.maxVideoMb} MB limit.`);
-        }
-        if (!CLIENT_UPLOAD_LIMITS.allowedVideoTypes.includes(videoFile.type)) {
-          throw new Error("Unsupported video format. Use MP4, MOV, WebM, or MKV.");
-        }
-
-        setUploadStage("Preparing upload...");
-        const signed = await requestSignedUploadUrl("video", videoFile);
-
-        setUploadStage("Uploading video...");
-        setUploadPercent(0);
-        await uploadFileWithProgress(signed.signedUrl, videoFile, setUploadPercent);
-
-        const meta = await readVideoMetadata(videoFile);
-        durationSeconds = meta.durationSeconds;
-        fileSizeBytes = videoFile.size;
-        videoUrl = signed.publicUrl;
-        storagePath = signed.path;
-      }
+      let sharedThumbnailUrl = initialVideo?.thumbnail_url ?? null;
+      let sharedThumbnailStoragePath = initialVideo?.thumbnail_storage_path ?? null;
 
       if (thumbnailFile) {
         if (thumbnailFile.size > CLIENT_UPLOAD_LIMITS.maxThumbnailMb * 1024 * 1024) {
           throw new Error(`Thumbnail exceeds the ${CLIENT_UPLOAD_LIMITS.maxThumbnailMb} MB limit.`);
         }
         setUploadStage("Uploading thumbnail...");
-        const signedThumb = await requestSignedUploadUrl("thumbnail", thumbnailFile);
-        await uploadFileWithProgress(signedThumb.signedUrl, thumbnailFile, () => {});
-        thumbnailUrl = signedThumb.publicUrl;
-        thumbnailStoragePath = signedThumb.path;
+        const uploadedThumb = await uploadFileWithProgress("thumbnail", thumbnailFile, () => {});
+        sharedThumbnailUrl = uploadedThumb.publicUrl;
+        sharedThumbnailStoragePath = uploadedThumb.path;
       }
 
-      setUploadStage("Saving details...");
-      setUploadPercent(null);
+      async function uploadCapturedThumb(source: File) {
+        const frame = await ensureCapturedThumb(source);
+        if (!frame) return null;
+        if (frame.size > CLIENT_UPLOAD_LIMITS.maxThumbnailMb * 1024 * 1024) return null;
+        const uploadedThumb = await uploadFileWithProgress("thumbnail", frame, () => {});
+        return { url: uploadedThumb.publicUrl, path: uploadedThumb.path };
+      }
 
-      const payload = {
-        title: title.trim(),
+      const shared = {
         description: description.trim() || null,
-        video_url: videoUrl,
-        thumbnail_url: thumbnailUrl,
-        storage_path: storagePath,
-        thumbnail_storage_path: thumbnailStoragePath,
         street: street.trim() || null,
         barangay: barangay.trim() || null,
         city: city.trim() || null,
@@ -161,20 +215,102 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
         latitude: latitude ? Number(latitude) : null,
         longitude: longitude ? Number(longitude) : null,
         recorded_at: recordedDate ? new Date(`${recordedDate}T00:00:00Z`).toISOString() : null,
-        duration_seconds: durationSeconds,
-        file_size_bytes: fileSizeBytes,
         category_id: categoryId || null,
         tags,
         status,
       };
 
       if (mode === "create") {
-        await apiFetch("/api/videos", { method: "POST", body: JSON.stringify(payload) });
-        toast.success("Video created.");
+        for (let index = 0; index < videoFiles.length; index++) {
+          const file = videoFiles[index];
+          if (file.size > CLIENT_UPLOAD_LIMITS.maxVideoMb * 1024 * 1024) {
+            throw new Error(`"${file.name}" exceeds the ${CLIENT_UPLOAD_LIMITS.maxVideoMb} MB limit.`);
+          }
+          const mime = videoMime(file);
+          if (!mime || !CLIENT_UPLOAD_LIMITS.allowedVideoTypes.includes(mime)) {
+            throw new Error(`"${file.name}" is not a supported format. Use MP4, MOV, WebM, or MKV.`);
+          }
+
+          setUploadStage(`Uploading ${index + 1} of ${videoFiles.length}: ${file.name}`);
+          setUploadPercent(0);
+          const thumbJob = thumbnailFile ? Promise.resolve(null) : uploadCapturedThumb(file);
+          const [uploaded, meta, captured] = await Promise.all([
+            uploadFileWithProgress("video", file, setUploadPercent),
+            readVideoMetadata(file),
+            thumbJob,
+          ]);
+
+          const videoTitle =
+            videoFiles.length === 1 ? title.trim() : title.trim() || titleFromFileName(file.name);
+
+          const thumbnailUrl = thumbnailFile ? sharedThumbnailUrl : captured?.url ?? null;
+          const thumbnailStoragePath = thumbnailFile
+            ? sharedThumbnailStoragePath
+            : captured?.path ?? null;
+
+          await apiFetch("/api/videos", {
+            method: "POST",
+            body: JSON.stringify({
+              ...shared,
+              title: videoTitle,
+              thumbnail_url: thumbnailUrl,
+              thumbnail_storage_path: thumbnailStoragePath,
+              video_url: uploaded.publicUrl,
+              storage_path: uploaded.path,
+              duration_seconds: meta.durationSeconds,
+              file_size_bytes: uploaded.fileSizeBytes,
+            }),
+          });
+        }
+        toast.success(videoFiles.length === 1 ? "Video created." : `${videoFiles.length} videos created.`);
       } else if (initialVideo) {
+        let videoUrl = initialVideo.video_url;
+        let storagePath = initialVideo.storage_path;
+        let durationSeconds = initialVideo.duration_seconds;
+        let fileSizeBytes = initialVideo.file_size_bytes;
+
+        const replacement = videoFiles[0];
+        if (replacement) {
+          if (replacement.size > CLIENT_UPLOAD_LIMITS.maxVideoMb * 1024 * 1024) {
+            throw new Error(`Video exceeds the ${CLIENT_UPLOAD_LIMITS.maxVideoMb} MB limit.`);
+          }
+          const mime = videoMime(replacement);
+          if (!mime || !CLIENT_UPLOAD_LIMITS.allowedVideoTypes.includes(mime)) {
+            throw new Error("Unsupported video format. Use MP4, MOV, WebM, or MKV.");
+          }
+          setUploadStage("Uploading replacement video...");
+          setUploadPercent(0);
+          const thumbJob = thumbnailFile ? Promise.resolve(null) : uploadCapturedThumb(replacement);
+          const [uploaded, meta, captured] = await Promise.all([
+            uploadFileWithProgress("video", replacement, setUploadPercent),
+            readVideoMetadata(replacement),
+            thumbJob,
+          ]);
+          videoUrl = uploaded.publicUrl;
+          storagePath = uploaded.path;
+          durationSeconds = meta.durationSeconds;
+          fileSizeBytes = uploaded.fileSizeBytes;
+
+          if (!thumbnailFile && captured) {
+            sharedThumbnailUrl = captured.url;
+            sharedThumbnailStoragePath = captured.path;
+          }
+        }
+
+        setUploadStage("Saving details...");
+        setUploadPercent(null);
         await apiFetch(`/api/videos/${initialVideo.id}`, {
           method: "PATCH",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...shared,
+            thumbnail_url: sharedThumbnailUrl,
+            thumbnail_storage_path: sharedThumbnailStoragePath,
+            title: title.trim(),
+            video_url: videoUrl,
+            storage_path: storagePath,
+            duration_seconds: durationSeconds,
+            file_size_bytes: fileSizeBytes,
+          }),
         });
         toast.success("Video updated.");
       }
@@ -193,6 +329,7 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
   }
 
   const isUploading = uploadStage !== null;
+  const previewVideoUrl = localVideoObjectUrl ?? initialVideo?.video_url ?? null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-24">
@@ -208,23 +345,56 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
           </label>
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted hover:bg-background">
             <UploadCloud className="h-6 w-6" />
-            {videoFile ? videoFile.name : mode === "edit" ? "Replace video (optional)" : "Click to select a video (MP4, MOV, WebM)"}
+            {videoFiles.length > 0
+              ? `${videoFiles.length} video${videoFiles.length === 1 ? "" : "s"} selected`
+              : mode === "edit"
+                ? "Replace video (optional)"
+                : "Click to select videos (MP4, MOV, WebM)"}
             <input
               type="file"
               accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
+              multiple={mode === "create"}
               className="hidden"
-              onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => setVideoFiles(Array.from(e.target.files ?? []))}
             />
           </label>
-          <p className="mt-2 text-xs text-muted">Max {CLIENT_UPLOAD_LIMITS.maxVideoMb} MB.</p>
+          {videoFiles.length > 0 && (
+            <ul className="mt-3 max-h-32 space-y-1 overflow-y-auto text-xs text-muted">
+              {videoFiles.map((file) => (
+                <li key={file.name} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setVideoFiles((files) => files.filter((f) => f !== file))}
+                    className="text-danger"
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-xs text-muted">
+            Max {CLIENT_UPLOAD_LIMITS.maxVideoMb} MB (2 GB) each. Files over 40 MB are stored on this server so Supabase's free 50 MB cap does not block them.
+            {mode === "create" && " Select several files to upload them together with the same location and status."}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-border bg-surface p-4">
           <label className="mb-2 block text-sm font-medium">Thumbnail</label>
-          <label className="relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted hover:bg-background">
+          <label className="relative flex min-h-[10rem] cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted hover:bg-background">
             {thumbnailPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={thumbnailPreview} alt="Thumbnail preview" className="absolute inset-0 h-full w-full object-cover opacity-90" />
+            ) : previewVideoUrl && !thumbnailFile ? (
+              <AdminVideoThumbnail
+                title={title || initialVideo?.title || "Video preview"}
+                thumbnailUrl={null}
+                videoUrl={previewVideoUrl}
+                className="absolute inset-0 h-full w-full overflow-hidden rounded-xl bg-border"
+                imageClassName="object-cover opacity-90"
+              />
             ) : (
               <>
                 <UploadCloud className="h-6 w-6" />
@@ -238,7 +408,9 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
               onChange={(e) => handleThumbnailChange(e.target.files?.[0] ?? null)}
             />
           </label>
-          <p className="mt-2 text-xs text-muted">Max {CLIENT_UPLOAD_LIMITS.maxThumbnailMb} MB. If omitted, no thumbnail is shown.</p>
+          <p className="mt-2 text-xs text-muted">
+            Max {CLIENT_UPLOAD_LIMITS.maxThumbnailMb} MB. If omitted, a still frame is captured from each video automatically.
+          </p>
         </div>
       </section>
 
@@ -261,13 +433,19 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
       <section className="space-y-4 rounded-2xl border border-border bg-surface p-4">
         <h2 className="text-sm font-semibold text-muted">Basic Information</h2>
         <div>
-          <label className="mb-1 block text-sm font-medium">Title *</label>
+          <label className="mb-1 block text-sm font-medium">
+            Title {mode === "edit" || videoFiles.length <= 1 ? "*" : "(optional)"}
+          </label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required
+            required={mode === "edit" || videoFiles.length <= 1}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
-            placeholder="Walking Along EDSA"
+            placeholder={
+              videoFiles.length > 1
+                ? "Leave blank to use each file name as the title"
+                : "Walking Along EDSA"
+            }
           />
         </div>
         <div>
@@ -427,7 +605,11 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
           className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          {mode === "create" ? "Create Video" : "Save Changes"}
+          {mode === "create"
+            ? videoFiles.length > 1
+              ? `Create ${videoFiles.length} Videos`
+              : "Create Video"
+            : "Save Changes"}
         </button>
       </div>
     </form>

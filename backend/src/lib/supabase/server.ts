@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/lib/supabase/database.types";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 /**
  * Supabase client bound to the current request's cookies. Used for
@@ -12,9 +13,17 @@ import type { Database } from "@/lib/supabase/database.types";
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
+  if (!url || !anonKey) {
+    throw new Error(
+      "Missing Supabase URL or public key. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY) in backend/.env.local."
+    );
+  }
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {

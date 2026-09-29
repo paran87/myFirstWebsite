@@ -6,6 +6,7 @@ import { jsonOk, jsonError, handleApiError } from "@/lib/api-response";
 import { uploadConfig } from "@/lib/config";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
+import { resolveThumbnailMimeType, resolveVideoMimeType } from "@/lib/mime";
 
 const requestSchema = z.object({
   kind: z.enum(["video", "thumbnail"]),
@@ -47,13 +48,19 @@ export async function POST(request: NextRequest) {
     const body = requestSchema.parse(await request.json());
 
     const isVideo = body.kind === "video";
+    const contentType = isVideo
+      ? resolveVideoMimeType(body.fileName, body.contentType)
+      : resolveThumbnailMimeType(body.fileName, body.contentType);
+
     const allowedTypes = isVideo ? uploadConfig.allowedVideoMimeTypes : uploadConfig.allowedThumbnailMimeTypes;
-    const maxBytes = (isVideo ? uploadConfig.maxVideoSizeMb : uploadConfig.maxThumbnailSizeMb) * 1024 * 1024;
+    const maxBytes = isVideo
+      ? Math.max(uploadConfig.maxVideoSizeMb * 1024 * 1024, 2 * 1024 * 1024 * 1024)
+      : uploadConfig.maxThumbnailSizeMb * 1024 * 1024;
     const bucket = isVideo ? uploadConfig.videoBucket : uploadConfig.thumbnailBucket;
 
-    if (!allowedTypes.includes(body.contentType)) {
+    if (!allowedTypes.includes(contentType)) {
       return jsonError(
-        `Unsupported file type "${body.contentType}". Allowed: ${allowedTypes.join(", ")}`,
+        `Unsupported file type "${contentType || body.contentType || "unknown"}". Allowed: ${allowedTypes.join(", ")}`,
         415
       );
     }
@@ -69,7 +76,21 @@ export async function POST(request: NextRequest) {
 
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.storage.from(bucket).createSignedUploadUrl(uniquePath);
-    if (error) throw error;
+    if (error) {
+      if (error.message?.toLowerCase().includes("bucket") || error.message?.toLowerCase().includes("not found")) {
+        return jsonError(
+          `Storage bucket "${bucket}" was not found. Run supabase/migrations/0002_storage.sql in the Supabase SQL Editor.`,
+          503
+        );
+      }
+      if (error.message?.includes("JWS") || error.message?.includes("JWT")) {
+        return jsonError(
+          "Invalid Supabase service role key. Copy the service_role secret (not the publishable key) into SUPABASE_SERVICE_ROLE_KEY in backend/.env.local and restart the backend.",
+          503
+        );
+      }
+      throw error;
+    }
 
     const { data: publicUrlData } = admin.storage.from(bucket).getPublicUrl(uniquePath);
 

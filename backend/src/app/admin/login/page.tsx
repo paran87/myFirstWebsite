@@ -29,16 +29,35 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
+    const devLogin = await fetch("/api/auth/dev-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (devLogin.ok) {
+      setLoading(false);
+      router.push(redirectedFrom);
+      router.refresh();
+      return;
+    }
+
     const supabase = createSupabaseBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const loginEmail = email.includes("@") ? email : `${email}@admin.local`;
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password,
+    });
 
     setLoading(false);
 
     if (signInError) {
+      const devBody = await devLogin.json().catch(() => null);
       setError(
-        signInError.message === "Invalid login credentials"
-          ? "Incorrect email or password."
-          : signInError.message
+        (devBody && (devBody.error as string)) ||
+          (signInError.message === "Invalid login credentials"
+            ? "Incorrect email or password."
+            : signInError.message)
       );
       return;
     }
@@ -73,17 +92,17 @@ function LoginForm() {
 
           <div className="space-y-1.5">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              Email / username
             </label>
             <input
               id="email"
-              type="email"
+              type="text"
               required
-              autoComplete="email"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
-              placeholder="admin@example.com"
+              placeholder="Username"
             />
           </div>
 

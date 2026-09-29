@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Video,
+  ImageIcon,
   FolderTree,
   Trash2,
   X,
@@ -15,6 +16,7 @@ import clsx from "clsx";
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/videos", label: "Videos", icon: Video },
+  { href: "/admin/photos", label: "Photos", icon: ImageIcon },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/recycle-bin", label: "Recycle Bin", icon: Trash2 },
 ];

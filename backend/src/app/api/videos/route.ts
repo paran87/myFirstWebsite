@@ -33,7 +33,9 @@ export async function GET(request: NextRequest) {
     );
 
     const admin = await tryGetAdmin();
-    const supabase = await createSupabaseServerClient();
+    // Dev admin and other backend-only sessions have no Supabase JWT, so RLS
+    // would hide drafts and recycle-bin rows. After auth, use the service role.
+    const supabase = admin ? createSupabaseAdminClient() : await createSupabaseServerClient();
 
     const from = (query.page - 1) * query.limit;
     const to = from + query.limit - 1;
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("videos")
-      .insert({ ...body, created_by: userId })
+      .insert({ ...body, created_by: userId || null })
       .select("*")
       .single();
 

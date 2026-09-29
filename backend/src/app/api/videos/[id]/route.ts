@@ -6,6 +6,7 @@ import { jsonOk, jsonError, handleApiError } from "@/lib/api-response";
 import { updateVideoSchema } from "@/lib/validation";
 import type { Video } from "@/lib/types";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
+import { removeLocalUpload } from "@/lib/local-storage";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const admin = await tryGetAdmin();
-    const supabase = await createSupabaseServerClient();
+    const supabase = admin ? createSupabaseAdminClient() : await createSupabaseServerClient();
 
     let builder = supabase.from("videos").select("*, category:categories(*)").eq("id", id);
     if (!admin) {
@@ -99,9 +100,11 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     if (!video) return jsonError("Video not found.", 404);
 
     if (video.storage_path) {
+      await removeLocalUpload(process.env.SUPABASE_VIDEO_BUCKET || "videos", video.storage_path);
       await admin.storage.from(process.env.SUPABASE_VIDEO_BUCKET || "videos").remove([video.storage_path]);
     }
     if (video.thumbnail_storage_path) {
+      await removeLocalUpload(process.env.SUPABASE_THUMBNAIL_BUCKET || "thumbnails", video.thumbnail_storage_path);
       await admin.storage
         .from(process.env.SUPABASE_THUMBNAIL_BUCKET || "thumbnails")
         .remove([video.thumbnail_storage_path]);

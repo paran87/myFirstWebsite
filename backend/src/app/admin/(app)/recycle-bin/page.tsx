@@ -1,43 +1,52 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
 import { RotateCcw, Trash2 } from "lucide-react";
+import { AdminVideoThumbnail } from "@/components/admin/video-thumbnail";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { PaginatedResult, Video } from "@/lib/types";
+import type { PaginatedResult, Photo, Video } from "@/lib/types";
+
+type Tab = "videos" | "photos";
+type BinItem = (Video | Photo) & { kind: Tab };
 
 export default function RecycleBinPage() {
-  const [result, setResult] = useState<PaginatedResult<Video> | null>(null);
+  const [tab, setTab] = useState<Tab>("videos");
+  const [items, setItems] = useState<BinItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toPurge, setToPurge] = useState<Video | null>(null);
+  const [toPurge, setToPurge] = useState<BinItem | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
-    apiFetch<PaginatedResult<Video>>("/api/videos?includeDeleted=true&limit=50")
-      .then(setResult)
+    const path =
+      tab === "videos"
+        ? "/api/videos?includeDeleted=true&status=deleted&limit=50"
+        : "/api/photos?includeDeleted=true&status=deleted&limit=50";
+
+    apiFetch<PaginatedResult<Video | Photo>>(path)
+      .then((result) => setItems(result.data.map((row) => ({ ...row, kind: tab }))))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
-  async function restore(video: Video) {
-    setBusyId(video.id);
+  async function restore(item: BinItem) {
+    setBusyId(item.id);
     try {
-      await apiFetch(`/api/videos/${video.id}/restore`, { method: "POST" });
-      toast.success(`"${video.title}" restored as a draft.`);
+      const base = item.kind === "videos" ? "videos" : "photos";
+      await apiFetch(`/api/${base}/${item.id}/restore`, { method: "POST" });
+      toast.success(`"${item.title}" restored as a draft.`);
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to restore video.");
+      toast.error(e instanceof Error ? e.message : "Failed to restore item.");
     } finally {
       setBusyId(null);
     }
@@ -47,12 +56,13 @@ export default function RecycleBinPage() {
     if (!toPurge) return;
     setBusyId(toPurge.id);
     try {
-      await apiFetch(`/api/videos/${toPurge.id}?permanent=true`, { method: "DELETE" });
+      const base = toPurge.kind === "videos" ? "videos" : "photos";
+      await apiFetch(`/api/${base}/${toPurge.id}?permanent=true`, { method: "DELETE" });
       toast.success(`"${toPurge.title}" permanently deleted.`);
       setToPurge(null);
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete video.");
+      toast.error(e instanceof Error ? e.message : "Failed to delete item.");
     } finally {
       setBusyId(null);
     }
@@ -62,55 +72,74 @@ export default function RecycleBinPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold">Recycle Bin</h1>
-        <p className="text-sm text-muted">Deleted videos are hidden from the public site but recoverable here.</p>
+        <p className="text-sm text-muted">Deleted videos and photos can be restored or permanently removed.</p>
+      </div>
+
+      <div className="flex gap-1 rounded-lg border border-border bg-surface p-1 w-fit">
+        {(["videos", "photos"] as Tab[]).map((key) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize ${
+              tab === key ? "bg-primary text-primary-foreground" : "text-muted hover:bg-border"
+            }`}
+          >
+            {key}
+          </button>
+        ))}
       </div>
 
       {loading && <TableSkeleton />}
       {!loading && error && <ErrorState message={error} onRetry={load} />}
-      {!loading && !error && result && result.data.length === 0 && (
-        <EmptyState title="Recycle bin is empty." description="Deleted videos will appear here." />
+      {!loading && !error && items.length === 0 && (
+        <EmptyState title="Recycle bin is empty." description={`Deleted ${tab} will appear here.`} />
       )}
 
-      {!loading && !error && result && result.data.length > 0 && (
+      {!loading && !error && items.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-background/50 text-xs uppercase text-muted">
               <tr>
-                <th className="px-4 py-3 font-medium">Thumbnail</th>
+                <th className="px-4 py-3 font-medium">Preview</th>
                 <th className="px-4 py-3 font-medium">Title</th>
                 <th className="px-4 py-3 font-medium">Deleted At</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {result.data.map((video) => (
-                <tr key={video.id} className="hover:bg-background/50">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-background/50">
                   <td className="px-4 py-3">
-                    <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-border">
-                      {video.thumbnail_url && (
-                        <Image src={video.thumbnail_url} alt={video.title} fill className="object-cover" unoptimized />
-                      )}
-                    </div>
+                    {item.kind === "videos" ? (
+                      <AdminVideoThumbnail
+                        title={item.title}
+                        thumbnailUrl={(item as Video).thumbnail_url}
+                        videoUrl={(item as Video).video_url}
+                      />
+                    ) : (
+                      <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-border">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={(item as Photo).image_url} alt={item.title} className="h-full w-full object-cover" />
+                      </div>
+                    )}
                   </td>
-                  <td className="px-4 py-3 font-medium">{video.title}</td>
+                  <td className="px-4 py-3 font-medium">{item.title}</td>
                   <td className="px-4 py-3 text-muted">
-                    {video.deleted_at ? new Date(video.deleted_at).toLocaleString() : "—"}
+                    {item.deleted_at ? new Date(item.deleted_at).toLocaleString() : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
                       <button
-                        onClick={() => restore(video)}
-                        disabled={busyId === video.id}
-                        title="Restore"
+                        onClick={() => restore(item)}
+                        disabled={busyId === item.id}
                         className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-primary hover:bg-primary/10 disabled:opacity-50"
                       >
                         <RotateCcw className="h-4 w-4" />
                         Restore
                       </button>
                       <button
-                        onClick={() => setToPurge(video)}
-                        disabled={busyId === video.id}
-                        title="Permanently delete"
+                        onClick={() => setToPurge(item)}
+                        disabled={busyId === item.id}
                         className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -127,8 +156,8 @@ export default function RecycleBinPage() {
 
       <ConfirmDialog
         open={!!toPurge}
-        title="Permanently delete this video?"
-        description={`"${toPurge?.title}" and its storage files will be permanently removed. This cannot be undone.`}
+        title={`Permanently delete this ${toPurge?.kind === "photos" ? "photo" : "video"}?`}
+        description={`"${toPurge?.title}" and its storage files will be permanently removed.`}
         confirmLabel="Delete Forever"
         loading={busyId === toPurge?.id}
         onConfirm={purge}

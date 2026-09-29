@@ -15,8 +15,12 @@ export const uploadConfig = {
     "video/x-matroska", // .mkv
   ],
   allowedThumbnailMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+  maxPhotoSizeMb: Number(process.env.PHOTO_MAX_FILE_SIZE_MB || 20),
+  maxPhotoBatchCount: Number(process.env.PHOTO_MAX_BATCH_COUNT || 30),
+  allowedPhotoMimeTypes: ["image/jpeg", "image/png", "image/webp"],
   videoBucket: process.env.SUPABASE_VIDEO_BUCKET || "videos",
   thumbnailBucket: process.env.SUPABASE_THUMBNAIL_BUCKET || "thumbnails",
+  photoBucket: process.env.SUPABASE_PHOTO_BUCKET || "photos",
   storageProvider: process.env.VIDEO_STORAGE_PROVIDER || "supabase",
   cdnUrl: process.env.VIDEO_CDN_URL || "",
 };

@@ -7,10 +7,20 @@
  * callers can show it directly in a toast.
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...init?.headers },
+    });
+  } catch (error) {
+    if (error instanceof TypeError && /fetch failed|failed to fetch/i.test(error.message)) {
+      throw new Error(
+        "Cannot reach the backend API. Run cd backend && npm run dev and try again."
+      );
+    }
+    throw error;
+  }
 
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const body = isJson ? await response.json().catch(() => null) : null;

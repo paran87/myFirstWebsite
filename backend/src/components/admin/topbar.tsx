@@ -17,6 +17,7 @@ export function AdminTopbar({
   const { theme, setTheme } = useTheme();
 
   async function handleLogout() {
+    await fetch("/api/auth/dev-logout", { method: "POST" }).catch(() => {});
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
     toast.success("Signed out.");

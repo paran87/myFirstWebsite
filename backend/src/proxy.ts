@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { DEV_ADMIN_COOKIE, devAdminCookieOptions, hasDevAdminSession, isDevAdminLoginEnabled } from "@/lib/dev-auth";
+import { getSupabaseAnonKey, getSupabaseUrl, hasSupabasePublicConfig } from "@/lib/supabase/env";
 
 /**
  * Protects every `/admin/*` page. Unauthenticated visitors are redirected
@@ -17,10 +19,9 @@ import { createServerClient } from "@supabase/ssr";
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  let supabaseUser = false;
+  if (hasSupabasePublicConfig()) {
+    const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -30,15 +31,25 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
-    }
-  );
+    });
+    const { data } = await supabase.auth.getUser();
+    supabaseUser = !!data.user;
+  }
 
-  const { data } = await supabase.auth.getUser();
-  const isLoggedIn = !!data.user;
+  const devLoggedIn =
+    isDevAdminLoginEnabled() &&
+    hasDevAdminSession(request.cookies.get(DEV_ADMIN_COOKIE)?.value);
+  const isLoggedIn = supabaseUser || devLoggedIn;
 
   const { pathname } = request.nextUrl;
   const isLoginPage = pathname === "/admin/login";
   const isAdminPage = pathname.startsWith("/admin");
+  // The public site's Admin button always starts a fresh login.
+  const requireFreshLogin = isLoginPage && request.nextUrl.searchParams.get("from") === "site";
+
+  if (requireFreshLogin) {
+    response.cookies.set(DEV_ADMIN_COOKIE, "", { ...devAdminCookieOptions, maxAge: 0 });
+  }
 
   if (isAdminPage && !isLoginPage && !isLoggedIn) {
     const loginUrl = new URL("/admin/login", request.url);
@@ -46,7 +57,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLoginPage && isLoggedIn) {
+  if (isLoginPage && isLoggedIn && !requireFreshLogin) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
 

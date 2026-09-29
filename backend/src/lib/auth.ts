@@ -1,6 +1,13 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  DEV_ADMIN_COOKIE,
+  getDevAdminProfile,
+  hasDevAdminSession,
+  isDevAdminLoginEnabled,
+} from "@/lib/dev-auth";
 import type { Profile } from "@/lib/types";
 
 export class UnauthorizedError extends Error {
@@ -21,7 +28,22 @@ export class ForbiddenError extends Error {
  * protection for API routes (which don't get redirected, they must
  * return proper 401/403 responses).
  */
+async function getDevAdminSessionIfValid(): Promise<{ userId: string; profile: Profile } | null> {
+  if (!isDevAdminLoginEnabled()) return null;
+  const cookieStore = await cookies();
+  const value = cookieStore.get(DEV_ADMIN_COOKIE)?.value;
+  if (!hasDevAdminSession(value)) return null;
+
+  // The dev login has no auth.users row, so videos.created_by must be null
+  // (the column references profiles, which references auth.users).
+  const profile = getDevAdminProfile();
+  return { userId: "", profile };
+}
+
 export async function requireAdmin(): Promise<{ userId: string; profile: Profile }> {
+  const devSession = await getDevAdminSessionIfValid();
+  if (devSession) return devSession;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
 

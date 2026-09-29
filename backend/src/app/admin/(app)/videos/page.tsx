@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Plus, Eye, Pencil, Trash2, Search } from "lucide-react";
+import { AdminVideoThumbnail } from "@/components/admin/video-thumbnail";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { LayoutToggle } from "@/components/ui/layout-toggle";
+import { useCatalogLayout } from "@/lib/catalog-layout";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { PaginatedResult, Video, VideoStatus } from "@/lib/types";
@@ -27,6 +29,7 @@ export default function AdminVideosPage() {
   const [page, setPage] = useState(1);
   const [toDelete, setToDelete] = useState<Video | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [layout, setLayout] = useCatalogLayout();
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams({ page: String(page), limit: "20" });
@@ -109,6 +112,7 @@ export default function AdminVideosPage() {
             </button>
           ))}
         </div>
+        <LayoutToggle layout={layout} onChange={setLayout} />
       </div>
 
       {loading && <TableSkeleton />}
@@ -117,7 +121,80 @@ export default function AdminVideosPage() {
         <EmptyState title="No videos found." description="Try changing your search or filters, or add a new video." />
       )}
 
-      {!loading && !error && result && result.data.length > 0 && (
+      {!loading && !error && result && result.data.length > 0 && layout === "grid" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {result.data.map((video) => (
+              <article key={video.id} className="overflow-hidden rounded-2xl border border-border bg-surface">
+                <AdminVideoThumbnail
+                  title={video.title}
+                  thumbnailUrl={video.thumbnail_url}
+                  videoUrl={video.video_url}
+                  className="relative aspect-video w-full overflow-hidden bg-border"
+                />
+                <div className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="line-clamp-2 font-semibold">{video.title}</h2>
+                    <StatusBadge status={video.status} />
+                  </div>
+                  <p className="text-sm text-muted">{video.city || video.location || "—"}</p>
+                  <p className="text-sm text-muted">
+                    {video.recorded_at ? new Date(video.recorded_at).toLocaleDateString() : "—"}
+                  </p>
+                  <div className="flex justify-end gap-1.5">
+                    <Link
+                      href={`/admin/videos/${video.id}/edit`}
+                      title="Edit"
+                      className="rounded-md p-2 text-muted hover:bg-border hover:text-primary"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Link>
+                    <a
+                      href={video.video_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="View"
+                      className="rounded-md p-2 text-muted hover:bg-border hover:text-primary"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </a>
+                    <button
+                      onClick={() => setToDelete(video)}
+                      title="Delete"
+                      className="rounded-md p-2 text-muted hover:bg-border hover:text-danger"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-muted">
+            <span>
+              Page {result.page} of {result.totalPages} &middot; {result.total} videos
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="rounded-md border border-border px-3 py-1.5 disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <button
+                disabled={page >= result.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded-md border border-border px-3 py-1.5 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && result && result.data.length > 0 && layout === "list" && (
         <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -135,11 +212,11 @@ export default function AdminVideosPage() {
                 {result.data.map((video) => (
                   <tr key={video.id} className="hover:bg-background/50">
                     <td className="px-4 py-3">
-                      <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-border">
-                        {video.thumbnail_url && (
-                          <Image src={video.thumbnail_url} alt={video.title} fill className="object-cover" unoptimized />
-                        )}
-                      </div>
+                      <AdminVideoThumbnail
+                        title={video.title}
+                        thumbnailUrl={video.thumbnail_url}
+                        videoUrl={video.video_url}
+                      />
                     </td>
                     <td className="max-w-[220px] truncate px-4 py-3 font-medium">{video.title}</td>
                     <td className="px-4 py-3 text-muted">{video.city || video.location || "—"}</td>

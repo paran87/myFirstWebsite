@@ -125,6 +125,70 @@ export interface Database {
           }
         ];
       };
+      photos: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          image_url: string;
+          storage_path: string | null;
+          location: string | null;
+          street: string | null;
+          barangay: string | null;
+          city: string | null;
+          province: string | null;
+          region: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          recorded_at: string | null;
+          uploaded_at: string;
+          file_size_bytes: number | null;
+          category_id: string | null;
+          tags: string[];
+          views: number;
+          status: "draft" | "published" | "private" | "deleted";
+          created_by: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          image_url: string;
+          storage_path?: string | null;
+          location?: string | null;
+          street?: string | null;
+          barangay?: string | null;
+          city?: string | null;
+          province?: string | null;
+          region?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          recorded_at?: string | null;
+          uploaded_at?: string;
+          file_size_bytes?: number | null;
+          category_id?: string | null;
+          tags?: string[];
+          views?: number;
+          status?: "draft" | "published" | "private" | "deleted";
+          created_by?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["photos"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "photos_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       video_views: {
         Row: {
           id: string;

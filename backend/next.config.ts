@@ -11,6 +11,15 @@ const supabaseHostname = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // Admin uploads pass through this server (avoids Supabase Storage CORS
+  // blocking direct browser uploads from localhost). Raise the cap so
+  // body-camera videos can be posted to /api/upload.
+  experimental: {
+    proxyClientMaxBodySize: "2048mb",
+    serverActions: {
+      bodySizeLimit: "2gb",
+    },
+  },
   images: {
     remotePatterns: [
       ...(supabaseHostname
@@ -19,9 +28,6 @@ const nextConfig: NextConfig = {
       { protocol: "https" as const, hostname: "**.supabase.co", pathname: "/storage/v1/object/public/**" },
     ],
   },
-  // Body size limits for Server Actions / route handlers stay small on
-  // purpose — actual video bytes never pass through this server (see
-  // `/api/upload/signed-url`), so we don't need to raise this.
 };
 
 export default nextConfig;

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { getVideos, type VideoListParams } from "@/lib/api";
 import { VideoCard } from "@/components/video/video-card";
+import { LayoutToggle } from "@/components/ui/layout-toggle";
+import { useCatalogLayout } from "@/lib/catalog-layout";
 import { EmptyState, ErrorState, VideoCardSkeleton } from "@/components/ui/states";
 import type { PaginatedResult, Video } from "@/lib/types";
 
@@ -25,6 +27,7 @@ export function VideoGrid({ initialResult, params }: VideoGridProps) {
   const [totalPages, setTotalPages] = useState(initialResult.totalPages);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useCatalogLayout();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const hasMore = page < totalPages;
@@ -61,7 +64,7 @@ export function VideoGrid({ initialResult, params }: VideoGridProps) {
 
   if (videos.length === 0) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <EmptyState />
       </div>
     );
@@ -69,9 +72,18 @@ export function VideoGrid({ initialResult, params }: VideoGridProps) {
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {videos.map((video) => (
-          <VideoCard key={video.id} video={video} />
+      <div className="mb-4 flex justify-end">
+        <LayoutToggle layout={layout} onChange={setLayout} />
+      </div>
+      <div
+        className={
+          layout === "list"
+            ? "flex flex-col gap-3"
+            : "grid auto-rows-fr grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3"
+        }
+      >
+        {videos.map((video, i) => (
+          <VideoCard key={video.id} video={video} index={i} layout={layout} />
         ))}
         {loadingMore &&
           Array.from({ length: 4 }).map((_, i) => <VideoCardSkeleton key={`skeleton-${i}`} />)}
@@ -84,14 +96,14 @@ export function VideoGrid({ initialResult, params }: VideoGridProps) {
       )}
 
       {hasMore && !error && (
-        <div ref={sentinelRef} className="mt-6 flex justify-center">
+        <div ref={sentinelRef} className="mt-8 flex justify-center">
           <button
             onClick={loadMore}
             disabled={loadingMore}
-            className="flex items-center gap-2 rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium hover:bg-border disabled:opacity-60"
+            className="group flex items-center gap-2 rounded-full border border-border bg-surface px-6 py-3 text-sm font-medium shadow-sm transition hover:border-primary/50 hover:shadow-md disabled:opacity-60"
           >
-            {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
-            {loadingMore ? "Loading..." : "Load More"}
+            {loadingMore && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+            {loadingMore ? "Loading..." : "Load More Videos"}
           </button>
         </div>
       )}
