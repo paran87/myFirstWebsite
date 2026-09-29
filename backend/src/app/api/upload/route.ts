@@ -8,7 +8,8 @@ import { resolvePhotoMimeType, resolveThumbnailMimeType, resolveVideoMimeType } 
 import { StorageTooLargeError, uploadToSupabaseStorage, VIDEO_STORAGE_MAX_BYTES } from "@/lib/supabase/storage-upload";
 import { localPublicUrl, saveLocalUpload, SUPABASE_SAFE_UPLOAD_BYTES } from "@/lib/local-storage";
 
-export const maxDuration = 600;
+// Vercel Hobby caps serverless functions at 300s (Pro allows up to 800s).
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 const IMAGE_UPLOAD_TYPES = ["image/jpeg", "image/png", "image/webp"];
