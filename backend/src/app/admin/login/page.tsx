@@ -52,7 +52,9 @@ function LoginForm() {
     setLoading(false);
 
     if (signInError) {
-      const devBody = await devLogin.json().catch(() => null);
+      // A 403 only means the dev shortcut is switched off; the Supabase
+      // result is the one that matters then.
+      const devBody = devLogin.status === 403 ? null : await devLogin.json().catch(() => null);
       setError(
         (devBody && (devBody.error as string)) ||
           (signInError.message === "Invalid login credentials"
