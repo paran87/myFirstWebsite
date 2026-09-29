@@ -99,7 +99,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function validateUpload(kind: UploadKind, file: File) {
+type ValidatedUpload =
+  | { error: string; status: 413 | 415 }
+  | { bucket: string; contentType: string; path: string };
+
+function validateUpload(kind: UploadKind, file: File): ValidatedUpload {
   const isVideo = kind === "video";
   const isPhoto = kind === "photo";
   const contentType = isVideo
