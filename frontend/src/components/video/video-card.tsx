@@ -24,8 +24,9 @@ export function VideoCard({
   return (
     <Link
       href={query ? `/video/${video.id}?${query}` : `/video/${video.id}`}
-      style={{ animationDelay: `${Math.min(index, 11) * 60}ms` }}
-      className={`card-hover animate-fade-up group overflow-hidden rounded-2xl border border-border/80 bg-surface/90 shadow-sm backdrop-blur-md ${
+      data-reveal
+      style={{ ["--reveal-delay" as string]: `${(index % 3) * 90}ms` }}
+      className={`card-hover group overflow-hidden rounded-[1.35rem] border border-border/80 bg-surface/90 shadow-sm shadow-black/5 backdrop-blur-md ${
         isList ? "flex flex-row items-stretch" : "flex h-full flex-col"
       }`}
     >
@@ -35,7 +36,7 @@ export function VideoCard({
             ? compact
               ? "aspect-video w-28 shrink-0 sm:w-36"
               : "aspect-video w-36 shrink-0 sm:w-56"
-            : "aspect-video w-full"
+            : "aspect-video w-full shrink-0"
         }`}
       >
         <VideoThumbnail
@@ -44,26 +45,31 @@ export function VideoCard({
           videoUrl={video.video_url}
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-40 transition-opacity duration-500 group-hover:opacity-100" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="flex h-14 w-14 scale-75 items-center justify-center rounded-full bg-white/90 text-black opacity-0 shadow-lg backdrop-blur transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
-            <Play className="h-6 w-6 translate-x-0.5 fill-current" />
+          <span
+            className={`play-ring relative flex scale-75 items-center justify-center rounded-full bg-brand-gradient text-white opacity-0 shadow-xl shadow-black/30 transition-all duration-500 ease-[var(--ease-spring)] group-hover:scale-100 group-hover:opacity-100 dark:text-primary-foreground ${
+              compact ? "h-10 w-10" : "h-14 w-14"
+            }`}
+          >
+            <Play className={`translate-x-0.5 fill-current ${compact ? "h-4 w-4" : "h-6 w-6"}`} />
           </span>
         </div>
 
-        <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-medium text-white backdrop-blur">
+        <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 font-mono text-xs font-semibold text-white backdrop-blur-md">
           <Clock className="h-3 w-3" />
           {formatDuration(video.duration_seconds)}
         </span>
         {video.category?.name && (
-          <span className="absolute left-2 top-2 rounded-full bg-primary/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground shadow-sm backdrop-blur">
+          <span className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             {video.category.name}
           </span>
         )}
       </div>
 
       <div className={`flex min-w-0 flex-1 flex-col gap-1.5 ${isList ? "justify-center p-3 sm:p-4" : "p-3.5"} ${compact ? "!p-2.5" : ""}`}>
-        <h3 className={`line-clamp-2 font-bold leading-snug transition-colors group-hover:text-primary ${compact ? "min-h-9 text-sm" : "min-h-12 text-base"}`}>
+        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-9 text-sm" : "min-h-13 text-[1.05rem]"}`}>
           {video.title}
         </h3>
         {isList ? (

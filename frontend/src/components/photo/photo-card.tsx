@@ -34,10 +34,9 @@ export function PhotoCard({
       scroll={scroll}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      style={animate ? { animationDelay: `${Math.min(index, 11) * 60}ms` } : undefined}
-      className={`card-hover group overflow-hidden rounded-2xl border bg-surface/90 shadow-sm backdrop-blur-md ${
-        animate ? "animate-fade-up" : ""
-      } ${
+      data-reveal={animate || undefined}
+      style={animate ? { ["--reveal-delay" as string]: `${(index % 3) * 90}ms` } : undefined}
+      className={`card-hover group overflow-hidden rounded-[1.35rem] border bg-surface/90 shadow-sm shadow-black/5 backdrop-blur-md ${
         active ? "border-primary ring-2 ring-primary/40" : "border-border/80"
       } ${isList ? "flex flex-row items-stretch" : "flex flex-col"}`}
     >
@@ -53,16 +52,18 @@ export function PhotoCard({
           src={photo.image_url}
           alt={photo.title}
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-110"
+          className="absolute inset-0 h-full w-full object-cover transition duration-700 ease-[var(--ease-out)] group-hover:scale-110"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         {photo.category?.name && (
-          <span className="absolute left-2 top-2 rounded-full bg-primary/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground shadow-sm backdrop-blur">
+          <span className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             {photo.category.name}
           </span>
         )}
       </div>
       <div className={`flex min-w-0 flex-1 flex-col gap-1.5 ${isList ? "justify-center p-3 sm:p-4" : "p-3.5"} ${compact ? "!p-2.5" : ""}`}>
-        <h3 className={`line-clamp-2 font-bold leading-snug transition-colors group-hover:text-primary ${compact ? "min-h-9 text-sm" : "min-h-12 text-base"}`}>
+        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-9 text-sm" : "min-h-13 text-[1.05rem]"}`}>
           {photo.title}
         </h3>
         {isList ? (

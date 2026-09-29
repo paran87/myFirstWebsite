@@ -1,4 +1,5 @@
-import { Inbox, AlertTriangle, RefreshCcw } from "lucide-react";
+import { AlertTriangle, RefreshCcw } from "lucide-react";
+import { LostMap } from "@/components/illustrations/lost-map";
 
 export function EmptyState({
   title = "No videos found.",
@@ -8,14 +9,10 @@ export function EmptyState({
   description?: string;
 }) {
   return (
-    <div className="col-span-full flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-border bg-surface/40 py-24 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-primary-2/15 text-primary">
-        <Inbox className="h-8 w-8" />
-      </div>
-      <div>
-        <p className="text-lg font-semibold">{title}</p>
-        <p className="mt-1 text-sm text-muted">{description}</p>
-      </div>
+    <div className="animate-fade-up col-span-full flex flex-col items-center justify-center gap-2 rounded-[1.75rem] border border-dashed border-border bg-surface/50 px-6 py-16 text-center">
+      <LostMap className="h-40 w-auto text-foreground" />
+      <p className="mt-2 font-display text-2xl font-extrabold tracking-tight">{title}</p>
+      <p className="max-w-sm text-base font-medium text-foreground/70">{description}</p>
     </div>
   );
 }
@@ -28,13 +25,15 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-danger/30 bg-danger/5 py-20 text-center">
-      <AlertTriangle className="h-9 w-9 text-danger" />
+    <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-[1.75rem] border border-dashed border-danger/30 bg-danger/5 py-20 text-center">
+      <span className="animate-wiggle flex h-16 w-16 items-center justify-center rounded-2xl bg-danger/10">
+        <AlertTriangle className="h-8 w-8 text-danger" />
+      </span>
       <p className="font-medium text-danger">{message}</p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-1 flex items-center gap-1.5 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          className="mt-1 flex items-center gap-1.5 rounded-full bg-danger px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-danger/25 transition hover:-translate-y-0.5"
         >
           <RefreshCcw className="h-3.5 w-3.5" />
           Try Again
@@ -46,7 +45,7 @@ export function ErrorState({
 
 export function VideoCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+    <div className="overflow-hidden rounded-[1.35rem] border border-border bg-surface/80">
       <div className="skeleton aspect-video w-full rounded-none" />
       <div className="space-y-2 p-3">
         <div className="skeleton h-4 w-4/5 rounded" />

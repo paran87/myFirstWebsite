@@ -10,7 +10,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
 
 const controlClass =
-  "w-full min-w-0 cursor-pointer rounded-full border border-border bg-surface-2/80 px-2.5 py-1 text-sm font-medium text-foreground outline-none transition hover:border-primary/40 focus:ring-4 focus:ring-primary/10 sm:w-auto";
+  "w-full min-w-0 cursor-pointer rounded-full border border-border bg-surface/90 px-3.5 py-2 text-sm font-semibold text-foreground outline-none transition hover:border-primary/40 focus:border-primary/50 focus:ring-4 focus:ring-primary/15 sm:w-auto";
 
 export function FiltersBar({ categories }: { categories: Category[] }) {
   const router = useRouter();
@@ -56,15 +56,15 @@ export function FiltersBar({ categories }: { categories: Category[] }) {
   }
 
   return (
-    <div className="glass grid grid-cols-2 items-center gap-1.5 rounded-2xl border border-border px-2 py-2 sm:flex sm:flex-wrap">
+    <div className="glass grid grid-cols-2 items-center gap-2 rounded-[1.4rem] border border-border/80 p-2 shadow-sm sm:flex sm:flex-wrap">
       <form onSubmit={handleSearchSubmit} className="relative col-span-2 min-w-0 sm:max-w-xs sm:flex-1">
-        <SlidersHorizontal className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-primary" />
+        <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search title, street, city..."
           aria-label="Search catalog"
-          className="w-full rounded-full border border-border bg-surface-2/80 py-1.5 pl-8 pr-8 text-sm font-medium text-foreground placeholder:text-foreground/50 outline-none transition hover:border-primary/40 focus:ring-4 focus:ring-primary/10"
+          className="w-full rounded-full border border-border bg-surface/90 py-2 pl-10 pr-9 text-sm font-semibold text-foreground placeholder:font-medium placeholder:text-foreground/50 outline-none transition hover:border-primary/40 focus:border-primary/50 focus:ring-4 focus:ring-primary/15"
         />
         {query && (
           <button
@@ -73,7 +73,7 @@ export function FiltersBar({ categories }: { categories: Category[] }) {
               setQuery("");
               updateParam("search", "");
             }}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted transition hover:bg-border hover:text-foreground"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted transition hover:bg-border hover:text-foreground"
             aria-label="Clear search"
           >
             <X className="h-3.5 w-3.5" />
@@ -133,7 +133,7 @@ export function FiltersBar({ categories }: { categories: Category[] }) {
       {hasActiveFilters && (
         <button
           onClick={clearFilters}
-          className="col-span-2 flex items-center justify-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold text-foreground transition hover:bg-danger/10 hover:text-danger sm:col-span-1"
+          className="col-span-2 flex items-center justify-center gap-1 rounded-full px-3.5 py-2 text-sm font-bold text-foreground transition hover:bg-danger/10 hover:text-danger sm:col-span-1"
         >
           <X className="h-3.5 w-3.5" />
           Clear

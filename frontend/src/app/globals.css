@@ -4,38 +4,82 @@
 /* Enable class-based dark mode (toggled by next-themes via `.dark` on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * "Manila golden hour" palette — warm paper, burnt-orange sunsets over the
+ * bay, jeepney rose and amber. Dark mode is the same city after dusk.
+ */
 :root {
-  --background: #f6f7fb;
+  --background: #fdf8f3;
   --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --foreground: #020617;
-  --muted: #334155;
-  --border: #e5e9f0;
-  --primary: #0d9488;
-  --primary-2: #6366f1;
+  --surface-2: #f9f1e8;
+  --foreground: #1b1624;
+  --muted: #4b4459;
+  --border: #ecdfd2;
+  --primary: #c8410e;
+  --primary-2: #be185d;
   --primary-foreground: #ffffff;
   --accent: #f59e0b;
+  --bay: #0e7490;
   --danger: #dc2626;
   --warning: #d97706;
   --success: #16a34a;
-  --ring: 13 148 136;
+  --ring: 200 65 14;
+
+  /* Illustration palette */
+  --sky-top: #fffaf4;
+  --sky-mid: #ffeedd;
+  --sky-low: #ffd5b8;
+  --sun: #ff9a62;
+  --sun-glow: #ffc49b;
+  --city-far: #f4cdb7;
+  --city-mid: #e7aa98;
+  --city-near: #c98a8f;
+  --city-ground: #b77582;
+  --window: #fff4e6;
+  --window-lit: #ffe08a;
+  --cloud: #ffffff;
+  --map-land: #fbf1e5;
+  --map-block: #f1e1cf;
+  --map-water: #a5d8e6;
+  --map-park: #c7e6c1;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .dark {
-  --background: #060911;
-  --surface: #0f1622;
-  --surface-2: #131c2b;
-  --foreground: #ffffff;
-  --muted: #e2e8f0;
-  --border: #1d283b;
-  --primary: #2dd4bf;
-  --primary-2: #818cf8;
-  --primary-foreground: #04231f;
-  --accent: #fbbf24;
+  --background: #0a0a17;
+  --surface: #13142a;
+  --surface-2: #1b1d38;
+  --foreground: #faf6f0;
+  --muted: #cdc7da;
+  --border: #2a2c4c;
+  --primary: #ff8a4c;
+  --primary-2: #f472b6;
+  --primary-foreground: #1f0a02;
+  --accent: #fcd34d;
+  --bay: #22d3ee;
   --danger: #f87171;
   --warning: #fbbf24;
   --success: #4ade80;
-  --ring: 45 212 191;
+  --ring: 255 138 76;
+
+  --sky-top: #05061a;
+  --sky-mid: #0f1238;
+  --sky-low: #2c1845;
+  --sun: #ff7a59;
+  --sun-glow: #7c2d52;
+  --city-far: #1c1d48;
+  --city-mid: #16173a;
+  --city-near: #0f1029;
+  --city-ground: #0b0c20;
+  --window: #262a55;
+  --window-lit: #ffd166;
+  --cloud: #3a3368;
+  --map-land: #191b36;
+  --map-block: #23264a;
+  --map-water: #1e4f6b;
+  --map-park: #1f3b36;
 }
 
 @theme inline {
@@ -49,11 +93,12 @@
   --color-primary-2: var(--primary-2);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
+  --color-bay: var(--bay);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-success: var(--success);
   --font-sans: var(--font-jakarta);
-  --font-display: var(--font-sora);
+  --font-display: var(--font-bricolage);
   --font-mono: var(--font-plex-mono);
 }
 
@@ -76,19 +121,31 @@
   background-clip: content-box;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  color: var(--color-foreground);
+}
+
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
   background: var(--color-background);
-  font-size: 17px;
+  font-size: 16px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 17px;
+  }
 }
 
 body {
   background: transparent;
+  overflow-x: clip;
   color: var(--color-foreground);
   font-family: var(--font-sans), "Segoe UI", Arial, Helvetica, sans-serif;
   font-weight: 500;
-  letter-spacing: 0.01em;
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -98,158 +155,305 @@ h2,
 h3,
 .font-display {
   font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
-/* ---------- Full-page photo background ---------- */
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/* ================================================================
+   Illustrated site background: sky, sun/moon, clouds, stars, skyline
+   ================================================================ */
 .site-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-top) 30%, var(--sky-mid) 62%, var(--sky-low) 100%);
 }
 
-.site-bg__photo {
+.site-bg__sun {
   position: absolute;
-  inset: -4%;
-  /* Manila street traffic — Unsplash, different from the hero skyline */
-  background-image: url("https://images.unsplash.com/photo-1669903675614-1144986e23a1?auto=format&fit=crop&w=1920&h=1080&q=80");
-  background-repeat: no-repeat;
-  background-size: cover;
-  will-change: transform;
+  left: 50%;
+  bottom: calc(min(34vh, 320px) - 7rem);
+  width: min(42vw, 520px);
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 50%, var(--sun) 0%, color-mix(in srgb, var(--sun) 70%, var(--sun-glow)) 38%, transparent 70%);
+  opacity: 0.75;
+  filter: blur(2px);
+  animation: sun-breathe 9s ease-in-out infinite;
 }
 
-.site-bg__photo--primary {
-  background-position: center 45%;
-  opacity: 0.88;
-  filter: saturate(1.2) contrast(1.08);
-  animation: bg-drift-slow 48s ease-in-out infinite alternate;
+.site-bg__glow {
+  position: absolute;
+  inset: auto -10% 0 -10%;
+  height: 70vh;
+  background: radial-gradient(ellipse 60% 55% at 50% 100%, color-mix(in srgb, var(--sun-glow) 70%, transparent), transparent 70%);
 }
 
-.site-bg__photo--secondary {
-  background-position: center 72%;
-  opacity: 0.22;
-  transform: scale(1.15);
-  filter: blur(2px) saturate(0.9);
-  mix-blend-mode: multiply;
-  animation: bg-drift-fast 36s ease-in-out infinite alternate-reverse;
+.dark .site-bg__sun {
+  opacity: 0.35;
 }
 
-.dark .site-bg__photo--primary {
-  opacity: 0.55;
-  filter: saturate(0.85) contrast(1.12) brightness(0.55);
+.site-bg__moon {
+  display: none;
+  position: absolute;
+  top: 12vh;
+  right: 9vw;
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 35%, #fff9e8, #f5e3b5 60%, #e8cf93);
+  box-shadow: 0 0 60px 12px rgba(255, 228, 160, 0.18), 0 0 140px 40px rgba(255, 200, 120, 0.08);
 }
-
-.dark .site-bg__photo--secondary {
-  opacity: 0.14;
-  mix-blend-mode: soft-light;
-}
-
-.site-bg__scrim {
+.site-bg__moon::after {
+  content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--background) 18%, transparent) 0%,
-      color-mix(in srgb, var(--background) 38%, transparent) 42%,
-      color-mix(in srgb, var(--background) 55%, transparent) 100%
-    ),
-    radial-gradient(ellipse 90% 60% at 50% 0%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 70%);
+    radial-gradient(circle at 62% 30%, rgba(200, 170, 110, 0.35) 0 6px, transparent 7px),
+    radial-gradient(circle at 40% 64%, rgba(200, 170, 110, 0.3) 0 9px, transparent 10px),
+    radial-gradient(circle at 70% 70%, rgba(200, 170, 110, 0.25) 0 4px, transparent 5px);
+}
+.dark .site-bg__moon {
+  display: block;
 }
 
-.dark .site-bg__scrim {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--background) 28%, transparent) 0%,
-      color-mix(in srgb, var(--background) 52%, transparent) 42%,
-      color-mix(in srgb, var(--background) 70%, transparent) 100%
-    ),
-    radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 65%);
+.site-bg__stars {
+  position: absolute;
+  inset: 0 0 30% 0;
+  width: 100%;
+  height: 70%;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.dark .site-bg__stars {
+  opacity: 1;
+}
+.star {
+  fill: #fff7e0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+.site-bg__clouds {
+  position: absolute;
+  inset: 0;
+}
+.cloud {
+  position: absolute;
+  height: 38px;
+  border-radius: 9999px;
+  background: var(--cloud);
+  opacity: 0.75;
+  filter: blur(1px);
+  animation: cloud-drift linear infinite;
+}
+.cloud::before,
+.cloud::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  background: inherit;
+}
+.cloud::before {
+  width: 46%;
+  height: 170%;
+  left: 16%;
+  bottom: 20%;
+}
+.cloud::after {
+  width: 34%;
+  height: 130%;
+  right: 16%;
+  bottom: 25%;
+}
+.dark .cloud {
+  opacity: 0.35;
+}
+
+.site-bg__birds {
+  position: absolute;
+  top: 18vh;
+  left: 0;
+  width: 90px;
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  animation: birds-fly 55s linear infinite;
+  animation-delay: -12s;
+}
+.dark .site-bg__birds {
+  display: none;
+}
+.bird {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: flap 0.9s ease-in-out infinite;
+}
+
+.site-bg__skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(34vh, 320px);
+}
+.site-bg__skyline > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.site-bg__dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(color-mix(in srgb, var(--foreground) 9%, transparent) 1px, transparent 1.4px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 0%, transparent 75%);
 }
 
 .site-bg__grain {
   position: absolute;
   inset: 0;
-  opacity: 0.045;
+  opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   mix-blend-mode: overlay;
 }
 
-.dark .site-bg__grain {
-  opacity: 0.06;
+/* Skyline shapes */
+.sk-far {
+  fill: var(--city-far);
+}
+.sk-mid {
+  fill: var(--city-mid);
+}
+.sk-near {
+  fill: var(--city-near);
+}
+.sk-ground {
+  fill: var(--city-ground);
+}
+.sk-window {
+  fill: var(--window);
+  opacity: 0.55;
+}
+.sk-window--lit {
+  fill: var(--window-lit);
+  opacity: 0.9;
+  animation: window-flicker 7s ease-in-out infinite;
+}
+.dark .sk-window--lit {
+  filter: drop-shadow(0 0 2px var(--window-lit));
+}
+.sk-lane {
+  stroke: color-mix(in srgb, var(--window-lit) 70%, transparent);
+  stroke-width: 2;
+  stroke-dasharray: 16 18;
+  animation: lane-scroll 1.6s linear infinite;
 }
 
-@keyframes bg-drift-slow {
-  from {
-    transform: scale(1.02) translate(0, 0);
-  }
-  to {
-    transform: scale(1.06) translate(-1.5%, 1%);
-  }
+/* ---------- Jeepney illustration ---------- */
+.jeepney-drive {
+  animation: jeepney-drive 38s linear infinite;
+}
+.jeepney-drive-screen {
+  animation: jeepney-drive-screen 24s linear infinite;
+}
+.jeepney-bob {
+  animation: jeepney-bob 0.6s ease-in-out infinite;
+}
+.jeepney-wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin 0.9s linear infinite;
 }
 
-@keyframes bg-drift-fast {
-  from {
-    transform: scale(1.12) translate(0, 0);
-  }
-  to {
-    transform: scale(1.16) translate(1.2%, -0.8%);
-  }
-}
-
-/* ---------- Ambient page background (aurora blobs) ---------- */
-.aurora-bg {
+/* ================================================================
+   Aurora blobs (used behind hero)
+   ================================================================ */
+.aurora {
   position: absolute;
-  inset: 0;
+  top: -6rem;
+  bottom: -4rem;
+  left: 50%;
+  width: 100vw;
+  translate: -50% 0;
   overflow: hidden;
   pointer-events: none;
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 75%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 75%, transparent);
 }
-.aurora-bg::before,
-.aurora-bg::after {
-  content: "";
+.aurora span {
   position: absolute;
-  width: 45vw;
-  height: 45vw;
   border-radius: 9999px;
-  filter: blur(90px);
-  opacity: 0.4;
+  filter: blur(70px);
+  opacity: 0.45;
   will-change: transform;
 }
-.aurora-bg::before {
-  top: -12vw;
-  left: -8vw;
-  background: radial-gradient(circle at center, var(--color-primary), transparent 70%);
+.aurora span:nth-child(1) {
+  width: 38rem;
+  height: 38rem;
+  top: -14rem;
+  left: -10rem;
+  background: radial-gradient(circle, var(--color-primary), transparent 65%);
   animation: float-a 18s ease-in-out infinite;
 }
-.aurora-bg::after {
-  bottom: -14vw;
-  right: -10vw;
-  background: radial-gradient(circle at center, var(--color-primary-2), transparent 70%);
+.aurora span:nth-child(2) {
+  width: 30rem;
+  height: 30rem;
+  top: 4rem;
+  right: -8rem;
+  background: radial-gradient(circle, var(--color-primary-2), transparent 65%);
   animation: float-b 22s ease-in-out infinite;
 }
-.dark .aurora-bg::before,
-.dark .aurora-bg::after {
-  opacity: 0.28;
+.aurora span:nth-child(3) {
+  width: 24rem;
+  height: 24rem;
+  bottom: -10rem;
+  left: 35%;
+  background: radial-gradient(circle, var(--color-accent), transparent 65%);
+  animation: float-a 26s ease-in-out infinite reverse;
+}
+.dark .aurora span {
+  opacity: 0.25;
 }
 
-/* ---------- Keyframes ---------- */
+/* ================================================================
+   Keyframes
+   ================================================================ */
 @keyframes float-a {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(6vw, 5vw) scale(1.15); }
+  50% { transform: translate(4rem, 3rem) scale(1.12); }
 }
 @keyframes float-b {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-5vw, -4vw) scale(1.1); }
+  50% { transform: translate(-3rem, 2rem) scale(1.08); }
 }
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; translate: 0 18px; }
+  to { opacity: 1; translate: 0 0; }
 }
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+@keyframes pop-in {
+  0% { opacity: 0; scale: 0.6; }
+  70% { opacity: 1; scale: 1.08; }
+  100% { opacity: 1; scale: 1; }
 }
 @keyframes gradient-pan {
   0%, 100% { background-position: 0% 50%; }
@@ -260,60 +464,262 @@ h3,
 }
 @keyframes skeleton-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.55; }
+}
+@keyframes float-y {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -12px; }
+}
+@keyframes draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes route-dash {
+  to { stroke-dashoffset: -40; }
+}
+@keyframes ping-ring {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(0.6); }
+}
+@keyframes window-flicker {
+  0%, 100% { opacity: 0.95; }
+  45% { opacity: 0.95; }
+  50% { opacity: 0.2; }
+  60% { opacity: 0.9; }
+}
+@keyframes cloud-drift {
+  from { transform: translateX(-30vw); }
+  to { transform: translateX(130vw); }
+}
+@keyframes birds-fly {
+  from { transform: translate(-120px, 0); }
+  50% { transform: translate(55vw, -30px); }
+  to { transform: translate(115vw, 10px); }
+}
+@keyframes flap {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.4); }
+}
+@keyframes sun-breathe {
+  0%, 100% { scale: 1; opacity: 0.75; }
+  50% { scale: 1.05; opacity: 0.9; }
+}
+@keyframes jeepney-drive {
+  from { transform: translateX(-220px); }
+  to { transform: translateX(1820px); }
+}
+@keyframes jeepney-drive-screen {
+  from { transform: translateX(-160px); }
+  to { transform: translateX(calc(100vw + 20px)); }
+}
+@keyframes jeepney-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes lane-scroll {
+  to { stroke-dashoffset: -34; }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+@keyframes wiggle {
+  0%, 100% { rotate: 0deg; }
+  25% { rotate: -6deg; }
+  75% { rotate: 6deg; }
+}
+@keyframes scroll-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
-/* ---------- Utility classes ---------- */
+/* ================================================================
+   Utility classes
+   ================================================================ */
 .animate-fade-up {
-  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fade-up 0.7s var(--ease-out) both;
 }
 .animate-fade-in {
   animation: fade-in 0.8s ease both;
 }
+.animate-pop-in {
+  animation: pop-in 0.6s var(--ease-spring) both;
+}
+.animate-float {
+  animation: float-y 6s ease-in-out infinite;
+}
+.animate-blink {
+  animation: blink 1.4s ease-in-out infinite;
+}
+.animate-wiggle {
+  animation: wiggle 2.6s ease-in-out infinite;
+}
+
+/* Scroll reveal — elements with [data-reveal] start hidden and are faded
+   up by <ScrollReveal /> as they enter the viewport. `.js` is added in
+   <head> before paint so no-JS visitors (and crawlers) always see content. */
+.js [data-reveal] {
+  opacity: 0;
+}
+
+.draw-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 2.4s var(--ease-out) 0.6s forwards;
+}
+.route-dash {
+  stroke-dasharray: 8 12;
+  animation: route-dash 1.2s linear infinite;
+}
+.ping-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ping-ring 2s var(--ease-out) infinite;
+}
 
 .text-gradient {
-  background: linear-gradient(110deg, var(--color-primary), var(--color-primary-2), var(--color-accent));
-  background-size: 200% auto;
+  background: linear-gradient(110deg, var(--color-primary), var(--color-primary-2), var(--color-accent), var(--color-primary));
+  background-size: 300% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: gradient-pan 6s ease infinite;
+  animation: gradient-pan 8s ease infinite;
+}
+
+.bg-brand-gradient {
+  background: linear-gradient(120deg, var(--color-primary), var(--color-primary-2));
 }
 
 .glass {
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
 }
 
 .page-shell {
-  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
-  backdrop-filter: blur(12px) saturate(130%);
-  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
   border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
-  border-radius: 1.5rem;
-  box-shadow: 0 20px 60px -40px rgba(2, 8, 23, 0.45);
+  border-radius: 1.75rem;
+  box-shadow:
+    0 1px 0 0 color-mix(in srgb, #fff 60%, transparent) inset,
+    0 30px 80px -50px rgba(120, 45, 20, 0.45);
 }
 
 .dark .page-shell {
-  background: color-mix(in srgb, var(--color-surface) 65%, transparent);
-  box-shadow: 0 24px 70px -45px rgba(0, 0, 0, 0.75);
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+    0 30px 80px -45px rgba(0, 0, 0, 0.85);
 }
 
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+.marquee-mask:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* Cards: lift + gradient ring on hover. The reveal animation drives the
+   `translate` property, so the hover `transform` composes with it. */
 .card-hover {
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+  position: relative;
+  transition:
+    transform 0.45s var(--ease-out),
+    box-shadow 0.45s ease,
+    border-color 0.45s ease;
+}
+.card-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-2), var(--color-accent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: none;
 }
 .card-hover:hover {
   transform: translateY(-6px);
-  box-shadow: 0 24px 50px -18px rgba(2, 8, 23, 0.35);
-  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  box-shadow: 0 28px 60px -24px color-mix(in srgb, var(--color-primary) 45%, rgba(2, 8, 23, 0.4));
+  border-color: transparent;
+}
+.card-hover:hover::after,
+.card-hover:focus-visible::after {
+  opacity: 1;
+}
+
+.play-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  animation: ping-ring 1.8s var(--ease-out) infinite;
+}
+
+.nav-link {
+  position: relative;
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.3rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-2));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s var(--ease-out);
+}
+.nav-link:hover::after,
+.nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+.scroll-progress {
+  display: none;
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-progress {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    transform-origin: left;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-2), var(--color-accent));
+    animation: scroll-progress linear both;
+    animation-timeline: scroll(root);
+  }
 }
 
 .skeleton {
   position: relative;
   overflow: hidden;
   animation: skeleton-pulse 1.6s ease-in-out infinite;
-  background-color: var(--color-border);
+  background-color: color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: 0.75rem;
 }
 .skeleton::after {
@@ -328,4 +734,28 @@ h3,
 .leaflet-container {
   border-radius: 0.75rem;
   z-index: 0;
+}
+
+/* Respect users who prefer less motion: keep everything visible and still. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .js [data-reveal] {
+    opacity: 1;
+  }
+  .cloud,
+  .site-bg__birds,
+  .jeepney-drive,
+  .jeepney-drive-screen {
+    animation: none !important;
+  }
+  .scroll-progress {
+    display: none;
+  }
 }

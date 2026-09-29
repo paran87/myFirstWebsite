@@ -1,3 +1,4 @@
+import { Camera } from "lucide-react";
 import { getCategories, getPhotos } from "@/lib/api";
 import { FiltersBar } from "@/components/video/filters-bar";
 import { PhotoGrid } from "@/components/photo/photo-grid";
@@ -30,11 +31,15 @@ export default async function PhotosPage({ searchParams }: PageProps<"/photos">)
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
-      <div className="page-shell p-5 sm:p-6 lg:p-8">
+      <section data-reveal className="page-shell p-5 sm:p-6 lg:p-8">
       <CatalogTabs />
 
-      <div className="mb-6 mt-2 flex flex-col gap-1">
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+      <div className="mb-6 mt-2 flex flex-col gap-1.5">
+        <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-primary">
+          <Camera className="h-4 w-4" />
+          The photo archive
+        </p>
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           {params.search ? (
             <>
               Photo results for <span className="text-gradient">&ldquo;{params.search}&rdquo;</span>
@@ -43,7 +48,7 @@ export default async function PhotosPage({ searchParams }: PageProps<"/photos">)
             "Street Photo Gallery"
           )}
         </h1>
-        <p className="text-base font-medium text-foreground/80">
+        <p className="text-base font-medium text-foreground/75 sm:text-lg">
           {result ? `${result.total.toLocaleString()} photo${result.total === 1 ? "" : "s"} available` : "Browse documentation photos"}
         </p>
       </div>
@@ -57,7 +62,7 @@ export default async function PhotosPage({ searchParams }: PageProps<"/photos">)
       ) : (
         result && <PhotoGrid key={JSON.stringify(params)} initialResult={result} params={params} />
       )}
-      </div>
+      </section>
     </main>
   );
 }

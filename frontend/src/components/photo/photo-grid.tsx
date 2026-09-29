@@ -80,7 +80,7 @@ export function PhotoGrid({
         {hasMore && !loadingMore && (
           <button
             onClick={loadMore}
-            className="rounded-full border border-border bg-surface px-6 py-2.5 text-sm font-medium transition hover:border-primary hover:text-primary"
+            className="rounded-full border border-border bg-surface px-7 py-3.5 text-base font-bold shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:text-primary hover:shadow-lg hover:shadow-primary/15"
           >
             Load more
           </button>

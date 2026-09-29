@@ -1,3 +1,4 @@
+import { Clapperboard } from "lucide-react";
 import { getCategories, getVideos } from "@/lib/api";
 import { CatalogTabs } from "@/components/layout/catalog-tabs";
 import { FiltersBar } from "@/components/video/filters-bar";
@@ -37,16 +38,20 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
       {!isFiltering && (
-        <div className="mb-8">
+        <div className="mb-10">
           <Hero totalVideos={result?.total} totalCategories={categories.length} />
         </div>
       )}
 
-      <div className="page-shell p-5 sm:p-6 lg:p-8">
+      <section id="catalog" data-reveal className="page-shell p-5 sm:p-6 lg:p-8">
       <CatalogTabs />
 
-      <div className="mb-6 mt-2 flex flex-col gap-1">
-        <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+      <div className="mb-6 mt-2 flex flex-col gap-1.5">
+        <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-primary">
+          <Clapperboard className="h-4 w-4" />
+          The video archive
+        </p>
+        <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           {params.search ? (
             <>
               Results for <span className="text-gradient">&ldquo;{params.search}&rdquo;</span>
@@ -55,7 +60,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             "Latest Documentation"
           )}
         </h2>
-        <p className="text-base font-medium text-foreground/80">
+        <p className="text-base font-medium text-foreground/75 sm:text-lg">
           {result ? `${result.total.toLocaleString()} video${result.total === 1 ? "" : "s"} available` : "Browse the public catalog"}
         </p>
       </div>
@@ -69,7 +74,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       ) : (
         result && <VideoGrid key={gridKey} initialResult={result} params={params} />
       )}
-      </div>
+      </section>
     </main>
   );
 }

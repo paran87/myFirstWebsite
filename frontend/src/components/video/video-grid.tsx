@@ -100,7 +100,7 @@ export function VideoGrid({ initialResult, params }: VideoGridProps) {
           <button
             onClick={loadMore}
             disabled={loadingMore}
-            className="group flex items-center gap-2 rounded-full border border-border bg-surface px-6 py-3 text-sm font-medium shadow-sm transition hover:border-primary/50 hover:shadow-md disabled:opacity-60"
+            className="group flex items-center gap-2 rounded-full border border-border bg-surface px-7 py-3.5 text-base font-bold shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:text-primary hover:shadow-lg hover:shadow-primary/15 disabled:opacity-60"
           >
             {loadingMore && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
             {loadingMore ? "Loading..." : "Load More Videos"}
