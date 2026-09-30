@@ -32,13 +32,18 @@ function FitTo({ positions }: { positions: LatLng[] }) {
     latest.current = positions;
   });
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const refit = () => {
-      const current = latest.current;
-      if (current.length === 1) map.setView(current[0], map.getZoom());
-      else if (current.length > 1) map.fitBounds(L.latLngBounds(current), { padding: [36, 36], maxZoom: 17 });
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const current = latest.current;
+        if (current.length === 1) map.setView(current[0], map.getZoom());
+        else if (current.length > 1) map.fitBounds(L.latLngBounds(current), { padding: [36, 36], maxZoom: 17 });
+      }, 120);
     };
     map.on("resize", refit);
     return () => {
+      clearTimeout(timer);
       map.off("resize", refit);
     };
   }, [map]);

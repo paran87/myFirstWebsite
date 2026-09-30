@@ -43,11 +43,16 @@ function FollowActive({ active, pins }: { active: PhotoPin | null; pins: PhotoPi
     latest.current = active;
   });
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const recenter = () => {
-      if (latest.current) map.setView(latest.current.position, map.getZoom());
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (latest.current) map.setView(latest.current.position, map.getZoom());
+      }, 120);
     };
     map.on("resize", recenter);
     return () => {
+      clearTimeout(timer);
       map.off("resize", recenter);
     };
   }, [map]);

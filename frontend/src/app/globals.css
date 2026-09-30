@@ -845,7 +845,7 @@ p {
   }
 
   .explorer {
-    --sheet-peek: 3.25rem;
+    --sheet-peek: 2.75rem;
     --sheet-open: 58dvh;
   }
 
@@ -858,7 +858,8 @@ p {
     bottom: var(--sheet-peek);
     z-index: 0;
   }
-  .explorer.sheet-open .explorer-map-slot {
+  .explorer.sheet-open .explorer-map-slot,
+  .explorer.sheet-dragging .explorer-map-slot {
     bottom: var(--sheet-open);
   }
   .explorer-map-slot > aside {
@@ -903,8 +904,13 @@ p {
     transform: translateY(calc(100% - var(--sheet-peek)));
     transition: transform 0.35s var(--ease-out);
   }
-  .explorer.sheet-open .explorer-sheet {
+  .explorer.sheet-open .explorer-sheet,
+  .explorer.sheet-dragging .explorer-sheet {
     transform: none;
+  }
+  /* Follow the finger exactly while the handle is being dragged. */
+  .explorer.sheet-dragging .explorer-sheet {
+    transition: none;
   }
   .explorer-sheet-handle {
     height: var(--sheet-peek);

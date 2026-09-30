@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Film, Home, ImageIcon } from "lucide-react";
+import { ArrowLeft, Film, Home, ImageIcon } from "lucide-react";
 import { setExplorerListOpen, useExplorerListOpen } from "@/lib/explorer-list";
 
 export type ListKind = "video" | "photo";
@@ -62,6 +62,63 @@ export function MapExplorer({
   const drawerOpen = useExplorerListOpen();
   const setDrawerOpen = setExplorerListOpen;
   const [sheetOpen, setSheetOpen] = useState(true);
+  // Height (px) the phone sheet was dragged to; null = the default height.
+  const [sheetHeight, setSheetHeight] = useState<number | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+  const drag = useRef<{ startY: number; startHeight: number; height: number; moved: boolean } | null>(null);
+
+  // Drag the handle to any height between "just the handle" and nearly
+  // full screen (a strip of map always stays visible). The height is
+  // written straight to a CSS variable while dragging so it tracks the
+  // finger without re-rendering; a tap without movement toggles Hide/Show.
+  function sheetLimits() {
+    const handle = sheetRef.current?.querySelector<HTMLElement>(".explorer-sheet-handle");
+    const min = handle?.offsetHeight ?? 44;
+    const max = window.innerHeight - 64 - 96; // header, then keep ~6rem of map
+    return { min, max: Math.max(min, max) };
+  }
+  function onHandleDown(event: PointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    const { min } = sheetLimits();
+    const startHeight = sheetOpen ? sheet.getBoundingClientRect().height : min;
+    drag.current = { startY: event.clientY, startHeight, height: startHeight, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function onHandleMove(event: PointerEvent<HTMLButtonElement>) {
+    const state = drag.current;
+    const main = mainRef.current;
+    if (!state || !main) return;
+    const dy = event.clientY - state.startY;
+    if (!state.moved && Math.abs(dy) < 6) return;
+    state.moved = true;
+    const { min, max } = sheetLimits();
+    state.height = Math.min(max, Math.max(min, state.startHeight - dy));
+    main.style.setProperty("--sheet-open", `${state.height}px`);
+    main.classList.add("sheet-dragging");
+  }
+  function onHandleUp() {
+    const state = drag.current;
+    drag.current = null;
+    if (!state) return;
+    mainRef.current?.classList.remove("sheet-dragging");
+    if (!state.moved) {
+      setSheetOpen((open) => !open);
+      return;
+    }
+    const { min } = sheetLimits();
+    if (state.height <= min + 24) {
+      // Dragged all the way down: collapse to the handle, remember the
+      // previous height for the next "Show".
+      mainRef.current?.style.setProperty("--sheet-open", sheetHeight ? `${sheetHeight}px` : "");
+      setSheetOpen(false);
+    } else {
+      setSheetHeight(state.height);
+      setSheetOpen(true);
+    }
+  }
 
   // A new item was selected (list, map pin or link): show its details and
   // get the list out of the way. Adjusting state during render on a changed
@@ -77,6 +134,8 @@ export function MapExplorer({
 
   return (
     <main
+      ref={mainRef}
+      style={sheetHeight ? ({ "--sheet-open": `${sheetHeight}px` } as CSSProperties) : undefined}
       className={`explorer animate-fade-in mx-auto w-full max-w-[1920px] px-4 py-6 lg:px-6 2xl:px-8 ${
         sheetOpen ? "sheet-open" : ""
       } ${drawerOpen ? "drawer-open" : ""}`}
@@ -94,20 +153,29 @@ export function MapExplorer({
       <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(17rem,0.75fr)] 2xl:gap-6">
         <div className="explorer-map-slot order-2 min-w-0 xl:order-none">{map}</div>
 
-        <section className="explorer-sheet order-1 flex min-h-0 min-w-0 flex-col gap-3 xl:order-none" aria-label={`${kindLabel} details`}>
+        <section
+          ref={sheetRef}
+          className="explorer-sheet order-1 flex min-h-0 min-w-0 flex-col gap-3 xl:order-none"
+          aria-label={activeTitle ? `${kindLabel}: ${activeTitle}` : `${kindLabel} details`}
+        >
           <button
             type="button"
-            onClick={() => setSheetOpen((open) => !open)}
+            onPointerDown={onHandleDown}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+            onPointerCancel={onHandleUp}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSheetOpen((open) => !open);
+              }
+            }}
             aria-expanded={sheetOpen}
-            className="explorer-sheet-handle relative flex w-full shrink-0 items-center justify-center gap-2 px-4 text-base font-bold lg:hidden"
+            aria-label={sheetOpen ? "Hide details (drag to resize)" : "Show details (drag to resize)"}
+            className="explorer-sheet-handle relative flex w-full shrink-0 cursor-grab touch-none select-none flex-col items-center justify-center gap-1 px-4 lg:hidden"
           >
-            <span className="absolute left-1/2 top-1.5 h-1 w-10 -translate-x-1/2 rounded-full bg-foreground/20" aria-hidden />
-            <span className="truncate">{activeTitle ?? `Loading ${kindLabel.toLowerCase()}…`}</span>
-            {sheetOpen ? (
-              <ChevronDown className="h-4 w-4 shrink-0 text-primary" />
-            ) : (
-              <ChevronUp className="h-4 w-4 shrink-0 text-primary" />
-            )}
+            <span className="h-1 w-10 rounded-full bg-foreground/25" aria-hidden />
+            <span className="text-sm font-bold text-primary">{sheetOpen ? "Hide" : "Show"}</span>
           </button>
           <div className="explorer-sheet-body flex min-h-0 flex-col gap-3">{children}</div>
         </section>
