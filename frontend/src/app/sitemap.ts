@@ -10,6 +10,8 @@ import { siteConfig } from "@/lib/config";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: siteConfig.url, changeFrequency: "daily", priority: 1 },
+    { url: `${siteConfig.url}/videos`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${siteConfig.url}/photos`, changeFrequency: "daily", priority: 0.9 },
   ];
 
   try {

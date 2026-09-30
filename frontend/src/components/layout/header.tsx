@@ -34,7 +34,7 @@ export function Header({ categories }: { categories: Category[] }) {
   const [scrolled, setScrolled] = useState(false);
   const isDark = mounted && resolvedTheme === "dark";
   const onPhotos = pathname.startsWith("/photo");
-  const onVideos = pathname === "/" || pathname.startsWith("/video");
+  const onVideos = pathname.startsWith("/video");
 
   // On the video/photo pages the ☰ opens the explorer's list instead of
   // the site menu (the list has its own Home/Videos/Photos tabs).
@@ -58,13 +58,13 @@ export function Header({ categories }: { categories: Category[] }) {
     event.preventDefault();
     const params = new URLSearchParams();
     if (query.trim()) params.set("search", query.trim());
-    const base = pathname.startsWith("/photo") ? "/photos" : "/";
+    const base = pathname.startsWith("/photo") ? "/photos" : "/videos";
     router.push(`${base}${params.toString() ? `?${params}` : ""}`);
     setMobileOpen(false);
   }
 
   function categoryHref(categoryId: string) {
-    const base = pathname.startsWith("/photo") ? "/photos" : "/";
+    const base = pathname.startsWith("/photo") ? "/photos" : "/videos";
     return `${base}?category=${categoryId}`;
   }
 
@@ -98,7 +98,7 @@ export function Header({ categories }: { categories: Category[] }) {
 
         <nav className="hidden items-center gap-1 lg:flex">
           <Link
-            href="/"
+            href="/videos"
             aria-current={onVideos ? "page" : undefined}
             className="nav-link rounded-lg px-3 py-2 text-base font-semibold text-foreground transition hover:text-primary aria-[current=page]:text-primary"
           >
@@ -191,7 +191,7 @@ export function Header({ categories }: { categories: Category[] }) {
           </form>
           <nav className="flex flex-col gap-1">
             <Link
-              href="/"
+              href="/videos"
               onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-2.5 rounded-xl px-3 py-3 text-base font-bold transition ${onVideos ? "bg-primary/10 text-primary" : "hover:bg-surface-2"}`}
             >

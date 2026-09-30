@@ -14,7 +14,7 @@ type Kind = "video" | "photo";
 
 
 const TABS = [
-  { kind: "video", href: "/", label: "Videos", icon: Film },
+  { kind: "video", href: "/videos", label: "Videos", icon: Film },
   { kind: "photo", href: "/photos", label: "Photos", icon: ImageIcon },
 ] as const;
 

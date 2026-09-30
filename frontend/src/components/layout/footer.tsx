@@ -82,7 +82,7 @@ export function Footer() {
             <nav aria-label="Footer" className="flex flex-col gap-3">
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/50">Explore</span>
               {[
-                { href: "/", label: "Videos", icon: Film },
+                { href: "/videos", label: "Videos", icon: Film },
                 { href: "/photos", label: "Photos", icon: Camera },
                 { href: "/sitemap.xml", label: "Sitemap", icon: MapIcon },
               ].map(({ href, label, icon: Icon }) => (

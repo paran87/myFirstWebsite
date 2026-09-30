@@ -8,7 +8,7 @@ import { setExplorerListOpen, useExplorerListOpen } from "@/lib/explorer-list";
 export type ListKind = "video" | "photo";
 
 const KINDS = {
-  video: { label: "Video", list: "Videos", icon: Film, backHref: "/", backLabel: "Back to catalog" },
+  video: { label: "Video", list: "Videos", icon: Film, backHref: "/videos", backLabel: "Back to videos" },
   photo: { label: "Photo", list: "Photos", icon: ImageIcon, backHref: "/photos", backLabel: "Back to photos" },
 } as const;
 
