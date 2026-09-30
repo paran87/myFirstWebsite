@@ -2,7 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Menu, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Film, Home, ImageIcon, Menu, X } from "lucide-react";
+
+const SECTIONS = [
+  { href: "/", label: "Home", icon: Home, kind: null },
+  { href: "/#catalog", label: "Videos", icon: Film, kind: "Video" },
+  { href: "/photos", label: "Photos", icon: ImageIcon, kind: "Photo" },
+] as const;
 
 /**
  * Shared shell for the video and photo pages.
@@ -92,22 +98,44 @@ export function MapExplorer({
         </section>
 
         <div className="explorer-drawer order-3 min-w-0 xl:order-none">
-          <div className="mb-3 flex items-center gap-3 lg:hidden">
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-xl font-extrabold leading-tight">{listTitle}</p>
-              <p className="text-xs font-medium text-foreground/65">
-                {listCount} {kindLabel.toLowerCase()}
-                {listCount === 1 ? "" : "s"} · tap one to see it on the map
-              </p>
-            </div>
+          {/* Quick switch between sections (phones) */}
+          <div className="mb-3 flex items-center gap-2 lg:hidden">
+            <nav aria-label="Sections" className="flex flex-1 gap-1 rounded-full border border-border bg-surface-2/70 p-1">
+              {SECTIONS.map(({ href, label, icon: Icon, kind }) => {
+                const current = kind === kindLabel;
+                return (
+                  <Link
+                    key={label}
+                    href={href}
+                    aria-current={current ? "page" : undefined}
+                    onClick={() => setDrawerOpen(false)}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-bold transition ${
+                      current
+                        ? "bg-brand-gradient text-white shadow-md shadow-primary/25 dark:text-primary-foreground"
+                        : "text-foreground/75 hover:bg-surface hover:text-primary"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
-              className="rounded-full p-2 text-foreground/70 hover:bg-surface-2"
+              className="shrink-0 rounded-full p-2 text-foreground/70 hover:bg-surface-2"
               aria-label="Close list"
             >
               <X className="h-5 w-5" />
             </button>
+          </div>
+          <div className="mb-3 lg:hidden">
+            <p className="font-display text-xl font-extrabold leading-tight">{listTitle}</p>
+            <p className="text-xs font-medium text-foreground/65">
+              {listCount} {kindLabel.toLowerCase()}
+              {listCount === 1 ? "" : "s"} · tap one to see it on the map
+            </p>
           </div>
           <div className="mb-3 lg:hidden">{filters}</div>
           {list}
