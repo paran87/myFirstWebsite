@@ -13,7 +13,14 @@ const supabaseHostname = hostnameOf(process.env.NEXT_PUBLIC_SUPABASE_URL);
 // `<backend>/api/files/...`, so that host must be allowed too.
 const backendHostname = hostnameOf(process.env.NEXT_PUBLIC_API_URL);
 
+const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
+  // Browser-side API calls go through the site's own domain and are proxied
+  // to the backend here, so they never depend on the backend's CORS setup.
+  async rewrites() {
+    return [{ source: "/backend-api/:path*", destination: `${apiUrl}/:path*` }];
+  },
   images: {
     remotePatterns: [
       ...(supabaseHostname

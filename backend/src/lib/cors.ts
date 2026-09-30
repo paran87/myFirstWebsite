@@ -12,7 +12,8 @@ function getAllowedOrigins(): string[] {
   const configured = process.env.ALLOWED_FRONTEND_ORIGINS || process.env.NEXT_PUBLIC_SITE_URL || "";
   return configured
     .split(",")
-    .map((o) => o.trim())
+    // Tolerate "https://site.app/" as well as "https://site.app".
+    .map((o) => o.trim().replace(/\/+$/, ""))
     .filter(Boolean);
 }
 

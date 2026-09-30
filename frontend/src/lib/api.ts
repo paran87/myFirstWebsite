@@ -1,4 +1,4 @@
-import { apiUrl } from "@/lib/config";
+import { apiBase } from "@/lib/config";
 import type { Category, PaginatedResult, Photo, Video } from "@/lib/types";
 
 export type PhotoListParams = VideoListParams;
@@ -25,7 +25,7 @@ function buildQuery(params: Record<string, string | number | undefined>): string
 }
 
 async function request<T>(path: string, revalidateSeconds = 30, tags: string[] = []): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetch(`${apiBase()}${path}`, {
     // Cached briefly so every page view doesn't hit Supabase. The admin
     // backend calls /api/revalidate with these tags after each change, so
     // edits show up right away instead of when the cache expires.
@@ -95,7 +95,7 @@ export function getCategories(): Promise<Category[]> {
 export async function registerVideoView(videoId: string): Promise<void> {
   try {
     const sessionId = getOrCreateViewSessionId();
-    await fetch(`${apiUrl}/videos/${videoId}/view`, {
+    await fetch(`${apiBase()}/videos/${videoId}/view`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId }),

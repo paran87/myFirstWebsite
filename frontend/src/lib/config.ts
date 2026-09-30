@@ -11,4 +11,12 @@ export const siteConfig = {
 /** Base URL of the backend API. Never hard-code localhost outside dev. */
 export const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
+/**
+ * Where API requests go: the server calls the backend directly, the browser
+ * uses the same-origin `/backend-api` proxy (see next.config.ts).
+ */
+export function apiBase() {
+  return typeof window === "undefined" ? apiUrl : "/backend-api";
+}
+
 export const CATEGORIES_FALLBACK_ICON = "Tag";
