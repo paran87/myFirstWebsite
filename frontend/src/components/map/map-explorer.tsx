@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Film, Home, ImageIcon, Menu, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Film, Home, ImageIcon } from "lucide-react";
+import { setExplorerListOpen, useExplorerListOpen } from "@/lib/explorer-list";
 
 export type ListKind = "video" | "photo";
 
@@ -26,7 +27,7 @@ const tabClass = (current: boolean) =>
  *
  * Phones/tablets (< lg), a map-first "explorer" (see `.explorer` in
  * globals.css): the map fills the screen and stays put, the list slides in
- * from the ☰ button, and the selected item's player/details sit in a bottom
+ * from the header's ☰ button, and the selected item's player/details sit in a bottom
  * sheet that collapses to a title bar. Picking an item closes the list and
  * opens the sheet while the map flies to it.
  *
@@ -58,7 +59,8 @@ export function MapExplorer({
 }) {
   const { label: kindLabel, backHref, backLabel } = KINDS[kind];
   const { label: listLabel, list: listTitle } = KINDS[listKind];
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerOpen = useExplorerListOpen();
+  const setDrawerOpen = setExplorerListOpen;
   const [sheetOpen, setSheetOpen] = useState(true);
 
   // A new item was selected (list, map pin or link): show its details and
@@ -67,9 +69,11 @@ export function MapExplorer({
   const [shownId, setShownId] = useState(activeId);
   if (shownId !== activeId) {
     setShownId(activeId);
-    setDrawerOpen(false);
     setSheetOpen(true);
   }
+  useEffect(() => setExplorerListOpen(false), [activeId]);
+  // Leaving the explorer (e.g. Home) must not leave the list "open".
+  useEffect(() => () => setExplorerListOpen(false), []);
 
   return (
     <main
@@ -110,7 +114,7 @@ export function MapExplorer({
 
         <div className="explorer-drawer order-3 min-w-0 xl:order-none">
           {/* Quick switch: Home, or swap the list between videos and photos */}
-          <div className="mb-3 flex items-center gap-2">
+          <div className="mb-3 flex items-center">
             <nav aria-label="Sections" className="flex flex-1 gap-1 rounded-full border border-border bg-surface-2/70 p-1">
               <Link href="/" onClick={() => setDrawerOpen(false)} className={tabClass(false)}>
                 <Home className="h-4 w-4" />
@@ -132,14 +136,6 @@ export function MapExplorer({
                 );
               })}
             </nav>
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(false)}
-              className="shrink-0 rounded-full p-2 text-foreground/70 hover:bg-surface-2 lg:hidden"
-              aria-label="Close list"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
           <div className="mb-3 lg:hidden">
             <p className="font-display text-xl font-extrabold leading-tight">{listTitle}</p>
@@ -153,15 +149,7 @@ export function MapExplorer({
         </div>
       </div>
 
-      {/* Phone controls */}
-      <button
-        type="button"
-        onClick={() => setDrawerOpen(true)}
-        className="explorer-menu-button fixed left-3 top-[4.75rem] z-30 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-[#13203b] text-white shadow-xl lg:hidden"
-        aria-label={`Show ${listTitle.toLowerCase()}`}
-      >
-        <Menu className="h-6 w-6" />
-      </button>
+      {/* Phone backdrop behind the list */}
       {drawerOpen && (
         <button
           type="button"

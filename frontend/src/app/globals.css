@@ -886,10 +886,6 @@ p {
   .explorer-map-slot .leaflet-container {
     border-radius: 0;
   }
-  /* Leave room for the ☰ button above Leaflet's zoom buttons. */
-  .explorer-map-slot .leaflet-top.leaflet-left {
-    top: 3.75rem;
-  }
 
   /* Bottom sheet with the player / photo and details. */
   .explorer-sheet {

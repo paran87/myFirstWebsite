@@ -17,6 +17,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { siteConfig } from "@/lib/config";
+import { setExplorerListOpen, useExplorerListOpen } from "@/lib/explorer-list";
 import type { Category } from "@/lib/types";
 
 export function Header({ categories }: { categories: Category[] }) {
@@ -35,7 +36,14 @@ export function Header({ categories }: { categories: Category[] }) {
   const onPhotos = pathname.startsWith("/photo");
   const onVideos = pathname === "/" || pathname.startsWith("/video");
 
-  const [mobileOpen, setMobileOpen] = useState(false);
+  // On the video/photo pages the ☰ opens the explorer's list instead of
+  // the site menu (the list has its own Home/Videos/Photos tabs).
+  const onExplorer = /^\/(video|photo)\//.test(pathname);
+  const listOpen = useExplorerListOpen();
+  const [siteMenuOpen, setSiteMenuOpen] = useState(false);
+  const mobileOpen = siteMenuOpen && !onExplorer;
+  const setMobileOpen = setSiteMenuOpen;
+  const menuOpen = onExplorer ? listOpen : mobileOpen;
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [query, setQuery] = useState(searchParams.get("search") ?? "");
 
@@ -70,11 +78,12 @@ export function Header({ categories }: { categories: Category[] }) {
     >
       <div className="mx-auto flex h-16 max-w-[1920px] items-center gap-4 px-4 lg:px-6 2xl:px-8">
         <button
-          onClick={() => setMobileOpen((v) => !v)}
+          onClick={() => (onExplorer ? setExplorerListOpen(!listOpen) : setMobileOpen((v) => !v))}
           className="rounded-lg p-2 text-muted transition hover:bg-surface-2 hover:text-foreground lg:hidden"
-          aria-label="Toggle menu"
+          aria-label={onExplorer ? (listOpen ? "Hide list" : "Show list") : "Toggle menu"}
+          aria-expanded={menuOpen}
         >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
         <Link href="/" className="group flex items-center gap-2.5 font-semibold">
