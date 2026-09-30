@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng, VideoRoute } from "@/lib/types";
-import { METRO_MANILA_CENTER, ROUTE_COLORS, TILE_ATTRIBUTION, TILE_URL, pinIcon } from "./pins";
+import { METRO_MANILA_CENTER, ROUTE_COLORS, pinIcon } from "./pins";
+import { BaseLayers } from "./base-layers";
 
 /** Frames the route; after the first video it glides to the next one. */
 function FitTo({ positions }: { positions: LatLng[] }) {
@@ -24,6 +25,24 @@ function FitTo({ positions }: { positions: LatLng[] }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refit only when the positions change
   }, [map, key]);
+
+  // Keep the route framed when the map area changes size (e.g. the phone
+  // bottom sheet opening or closing).
+  const latest = useRef(positions);
+  useEffect(() => {
+    latest.current = positions;
+  });
+  useEffect(() => {
+    const refit = () => {
+      const current = latest.current;
+      if (current.length === 1) map.setView(current[0], map.getZoom());
+      else if (current.length > 1) map.fitBounds(L.latLngBounds(current), { padding: [36, 36], maxZoom: 17 });
+    };
+    map.on("resize", refit);
+    return () => {
+      map.off("resize", refit);
+    };
+  }, [map]);
   return null;
 }
 
@@ -63,7 +82,7 @@ export function VideoRouteMap({
       scrollWheelZoom
       style={{ height: "100%", width: "100%" }}
     >
-      <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+      <BaseLayers />
       <AutoResize />
       <FitTo positions={fit} />
 

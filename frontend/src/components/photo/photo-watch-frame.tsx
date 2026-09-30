@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
+import { MapExplorer } from "@/components/map/map-explorer";
 import { FiltersBar } from "@/components/video/filters-bar";
 import { PhotoCatalogContext } from "@/components/photo/photo-catalog-context";
 import { RelatedPhotos } from "@/components/photo/related-photos";
@@ -65,31 +64,26 @@ export function PhotoWatchFrame({
     [photos, filterKey, fullscreen, activePhoto]
   );
 
+  const params = useParams();
+  const activeId = String(params.id ?? "");
+  const shown = activePhoto?.id === activeId ? activePhoto : photos.find((photo) => photo.id === activeId) ?? null;
+
   return (
     <PhotoCatalogContext.Provider value={value}>
-      <main className="mx-auto w-full max-w-[1920px] px-4 py-6 lg:px-6 2xl:px-8">
-        <Link
-          href="/photos"
-          className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to photos
-        </Link>
-
-        <div className="z-20 mb-4 lg:sticky lg:top-16">
-          <FiltersBar categories={categories} />
-        </div>
-
-        <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(17rem,0.75fr)] 2xl:gap-6">
-          <div className="order-2 min-w-0 xl:order-none">
-            <PhotoMapPanel />
-          </div>
-          <div className="order-1 min-w-0 xl:order-none">{children}</div>
-          <div className="order-3 min-w-0 xl:order-none">
-            <RelatedPhotos photos={photos} />
-          </div>
-        </div>
-      </main>
+      <MapExplorer
+        activeId={activeId}
+        activeTitle={shown?.title ?? null}
+        kindLabel="Photo"
+        backHref="/photos"
+        backLabel="Back to photos"
+        listTitle="Photos"
+        listCount={photos.length}
+        filters={<FiltersBar categories={categories} />}
+        map={<PhotoMapPanel />}
+        list={<RelatedPhotos photos={photos} />}
+      >
+        {children}
+      </MapExplorer>
     </PhotoCatalogContext.Provider>
   );
 }

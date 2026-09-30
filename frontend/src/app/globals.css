@@ -737,7 +737,8 @@ p {
   background: var(--color-surface-2);
 }
 /* Dark mode: invert the OSM tiles so the map matches the night theme. */
-.dark .leaflet-tile-pane {
+/* Dark mode: invert the street tiles (not satellite imagery) to match the night theme. */
+.dark .map-tiles-streets {
   filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.8);
 }
 .leaflet-tooltip.map-label {
@@ -825,5 +826,132 @@ p {
   }
   .scroll-progress {
     display: none;
+  }
+}
+
+/* ================================================================
+   Map explorer (video/photo pages on phones & tablets)
+   Map fills the screen and stays put; the list slides in from the left
+   and the selected item's details sit in a bottom sheet. Desktop (lg+)
+   keeps the normal three-column layout, so everything here is scoped
+   to small screens.
+   ================================================================ */
+@media (max-width: 1023.98px) {
+  html:has(.explorer) {
+    overflow: hidden;
+  }
+  html:has(.explorer) footer {
+    display: none;
+  }
+
+  .explorer {
+    --sheet-peek: 3.25rem;
+    --sheet-open: 58dvh;
+  }
+
+  /* Map: full screen under the header, above the collapsed sheet. */
+  .explorer-map-slot {
+    position: fixed;
+    top: 4rem;
+    left: 0;
+    right: 0;
+    bottom: var(--sheet-peek);
+    z-index: 0;
+  }
+  .explorer.sheet-open .explorer-map-slot {
+    bottom: var(--sheet-open);
+  }
+  .explorer-map-slot > aside {
+    height: 100%;
+    max-height: none;
+    padding: 0;
+    gap: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .explorer-map-slot .explorer-hide-mobile {
+    display: none;
+  }
+  .explorer-map-slot .explorer-map-box {
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+  }
+  .explorer-map-slot .leaflet-container {
+    border-radius: 0;
+  }
+  /* Leave room for the ☰ button above Leaflet's zoom buttons. */
+  .explorer-map-slot .leaflet-top.leaflet-left {
+    top: 3.75rem;
+  }
+
+  /* Bottom sheet with the player / photo and details. */
+  .explorer-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    height: var(--sheet-open);
+    gap: 0;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+    background: var(--color-surface);
+    box-shadow: 0 -16px 40px -16px rgba(0, 0, 0, 0.5);
+    transform: translateY(calc(100% - var(--sheet-peek)));
+    transition: transform 0.35s var(--ease-out);
+  }
+  .explorer.sheet-open .explorer-sheet {
+    transform: none;
+  }
+  .explorer-sheet-handle {
+    height: var(--sheet-peek);
+    color: var(--color-foreground);
+  }
+  .explorer-sheet-body {
+    /* Block (not flex) so the player/photo keep their natural height and
+       the details simply scroll underneath. */
+    display: block;
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 0.75rem 1.25rem;
+  }
+  .explorer-sheet-body > * + * {
+    margin-top: 0.75rem;
+  }
+
+  /* Slide-in list. */
+  .explorer-drawer {
+    position: fixed;
+    top: 4rem;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: min(88vw, 24rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.875rem;
+    background: var(--color-surface);
+    box-shadow: 16px 0 40px -16px rgba(0, 0, 0, 0.5);
+    transform: translateX(-102%);
+    transition: transform 0.3s var(--ease-out);
+  }
+  .explorer.drawer-open .explorer-drawer {
+    transform: none;
+  }
+  .explorer-drawer > aside {
+    padding: 0;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }

@@ -23,7 +23,7 @@ export function LocationPanel({
 }) {
   return (
     <aside className="page-shell flex min-h-0 flex-col gap-3 p-3 sm:p-4 xl:sticky xl:top-20 xl:h-[calc(100vh-6rem)] xl:max-h-[calc(100vh-6rem)]">
-      <div className="flex items-center gap-2.5 px-1">
+      <div className="explorer-hide-mobile flex items-center gap-2.5 px-1">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">{icon}</span>
         <div className="min-w-0">
           <h2 className="text-base font-extrabold leading-tight tracking-tight">{title}</h2>
@@ -31,7 +31,7 @@ export function LocationPanel({
         </div>
       </div>
 
-      <div className="relative h-[26rem] min-h-[18rem] overflow-hidden rounded-lg border border-border sm:h-[34rem] xl:h-auto xl:flex-1">
+      <div className="explorer-map-box relative h-[26rem] min-h-[18rem] overflow-hidden rounded-lg border border-border sm:h-[34rem] xl:h-auto xl:flex-1">
         {map}
         {empty && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-surface/70 p-5 backdrop-blur-[2px]">
@@ -46,7 +46,7 @@ export function LocationPanel({
         )}
       </div>
 
-      {children && <div className="space-y-2 px-1 text-sm">{children}</div>}
+      {children && <div className="explorer-hide-mobile space-y-2 px-1 text-sm">{children}</div>}
     </aside>
   );
 }
@@ -77,8 +77,8 @@ export function formatDistance(meters: number | null | undefined) {
 export function LocationPanelSkeleton() {
   return (
     <aside className="page-shell flex min-h-0 flex-col gap-3 p-3 sm:p-4 xl:sticky xl:top-20 xl:h-[calc(100vh-6rem)] xl:max-h-[calc(100vh-6rem)]">
-      <div className="skeleton h-9 w-40" />
-      <div className="skeleton h-[26rem] w-full sm:h-[34rem] xl:h-auto xl:flex-1" />
+      <div className="skeleton explorer-hide-mobile h-9 w-40" />
+      <div className="skeleton explorer-map-box h-[26rem] w-full sm:h-[34rem] xl:h-auto xl:flex-1" />
     </aside>
   );
 }

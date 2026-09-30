@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, Marker, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng } from "@/lib/types";
-import { METRO_MANILA_CENTER, TILE_ATTRIBUTION, TILE_URL, pinIcon } from "./pins";
+import { METRO_MANILA_CENTER, pinIcon } from "./pins";
+import { BaseLayers } from "./base-layers";
 
 export interface PhotoPin {
   id: string;
@@ -31,6 +32,22 @@ function FollowActive({ active, pins }: { active: PhotoPin | null; pins: PhotoPi
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- follow the selection only
   }, [map, activeKey]);
+
+  // Keep the selected photo centred when the map area changes size (e.g.
+  // the phone bottom sheet opening or closing).
+  const latest = useRef(active);
+  useEffect(() => {
+    latest.current = active;
+  });
+  useEffect(() => {
+    const recenter = () => {
+      if (latest.current) map.setView(latest.current.position, map.getZoom());
+    };
+    map.on("resize", recenter);
+    return () => {
+      map.off("resize", recenter);
+    };
+  }, [map]);
   return null;
 }
 
@@ -67,7 +84,7 @@ export function PhotoLocationsMap({
       scrollWheelZoom
       style={{ height: "100%", width: "100%" }}
     >
-      <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+      <BaseLayers />
       <AutoResize />
       <FollowActive active={active} pins={pins} />
 
