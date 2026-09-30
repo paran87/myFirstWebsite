@@ -10,6 +10,9 @@ import { LayoutToggle } from "@/components/ui/layout-toggle";
 import { useCatalogLayout } from "@/lib/catalog-layout";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SortSelect } from "@/components/admin/sort-select";
+import { formatBytes } from "@/lib/format";
+import type { ListSort } from "@/lib/sort";
 import type { PaginatedResult, Photo, VideoStatus } from "@/lib/types";
 
 const STATUS_FILTERS: { label: string; value: VideoStatus | "all" }[] = [
@@ -26,6 +29,7 @@ export default function AdminPhotosPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<VideoStatus | "all">("all");
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<ListSort>("uploaded_newest");
   const [toDelete, setToDelete] = useState<Photo | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [layout, setLayout] = useCatalogLayout();
@@ -34,8 +38,9 @@ export default function AdminPhotosPage() {
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (search) params.set("search", search);
     if (status !== "all") params.set("status", status);
+    params.set("sort", sort);
     return params.toString();
-  }, [page, search, status]);
+  }, [page, search, status, sort]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -47,6 +52,7 @@ export default function AdminPhotosPage() {
   }, [queryString]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
@@ -110,6 +116,13 @@ export default function AdminPhotosPage() {
             </button>
           ))}
         </div>
+        <SortSelect
+          value={sort}
+          onChange={(next) => {
+            setPage(1);
+            setSort(next);
+          }}
+        />
         <LayoutToggle layout={layout} onChange={setLayout} />
       </div>
 
@@ -120,6 +133,7 @@ export default function AdminPhotosPage() {
       )}
 
       {!loading && !error && result && result.data.length > 0 && layout === "grid" && (
+        <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {result.data.map((photo) => (
             <article key={photo.id} className="overflow-hidden rounded-2xl border border-border bg-surface">
@@ -133,6 +147,11 @@ export default function AdminPhotosPage() {
                   <StatusBadge status={photo.status} />
                 </div>
                 <p className="text-sm text-muted">{photo.city || photo.location || "—"}</p>
+                <p className="text-sm text-muted">
+                  {photo.recorded_at ? new Date(photo.recorded_at).toLocaleDateString() : "—"}
+                  {" · "}
+                  {photo.file_size_bytes ? formatBytes(photo.file_size_bytes) : "—"}
+                </p>
                 <div className="flex justify-end gap-1.5">
                   <Link href={`/admin/photos/${photo.id}/edit`} className="rounded-md p-2 text-muted hover:bg-border hover:text-primary">
                     <Pencil className="h-4 w-4" />
@@ -148,16 +167,41 @@ export default function AdminPhotosPage() {
             </article>
           ))}
         </div>
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-muted">
+            <span>
+              Page {result.page} of {result.totalPages} &middot; {result.total} photos
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="rounded-md border border-border px-3 py-1.5 disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <button
+                disabled={page >= result.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded-md border border-border px-3 py-1.5 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {!loading && !error && result && result.data.length > 0 && layout === "list" && (
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <div className="space-y-4">
+        <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border bg-background/50 text-xs uppercase text-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Preview</th>
                 <th className="px-4 py-3 font-medium">Title</th>
                 <th className="px-4 py-3 font-medium">Location</th>
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Size</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
@@ -173,6 +217,12 @@ export default function AdminPhotosPage() {
                   </td>
                   <td className="max-w-[220px] truncate px-4 py-3 font-medium">{photo.title}</td>
                   <td className="px-4 py-3 text-muted">{photo.city || photo.location || "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted">
+                    {photo.recorded_at ? new Date(photo.recorded_at).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted">
+                    {photo.file_size_bytes ? formatBytes(photo.file_size_bytes) : "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={photo.status} />
                   </td>
@@ -193,6 +243,28 @@ export default function AdminPhotosPage() {
               ))}
             </tbody>
           </table>
+        </div>
+          <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-muted">
+            <span>
+              Page {result.page} of {result.totalPages} &middot; {result.total} photos
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="rounded-md border border-border px-3 py-1.5 disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <button
+                disabled={page >= result.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded-md border border-border px-3 py-1.5 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

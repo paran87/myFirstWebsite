@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { uploadConfig } from "@/lib/config";
+import { LIST_SORTS } from "@/lib/sort";
 
 export const videoStatusSchema = z.enum(["draft", "published", "private", "deleted"]);
 
@@ -86,7 +87,7 @@ export const listPhotosQuerySchema = z.object({
   dateTo: z.string().optional(),
   year: z.coerce.number().int().optional(),
   includeDeleted: z.coerce.boolean().optional().default(false),
-  sort: z.enum(["newest", "oldest", "most_viewed"]).optional().default("newest"),
+  sort: z.enum(LIST_SORTS).optional().default("newest"),
 });
 
 export const listVideosQuerySchema = z.object({
@@ -100,7 +101,7 @@ export const listVideosQuerySchema = z.object({
   dateTo: z.string().optional(),
   year: z.coerce.number().int().optional(),
   includeDeleted: z.coerce.boolean().optional().default(false),
-  sort: z.enum(["newest", "oldest", "most_viewed"]).optional().default("newest"),
+  sort: z.enum(LIST_SORTS).optional().default("newest"),
 });
 
 export function slugify(input: string): string {

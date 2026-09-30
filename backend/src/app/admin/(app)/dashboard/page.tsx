@@ -5,14 +5,8 @@ import { Video, Eye, FolderTree, CalendarPlus, HardDrive, FileClock } from "luci
 import { StatCard } from "@/components/ui/stat-card";
 import { ErrorState } from "@/components/ui/states";
 import { apiFetch } from "@/lib/api-client";
+import { formatBytes } from "@/lib/format";
 import type { DashboardStats } from "@/lib/types";
-
-function formatBytes(bytes: number): string {
-  if (!bytes) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);

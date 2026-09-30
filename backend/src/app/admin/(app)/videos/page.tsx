@@ -11,6 +11,9 @@ import { LayoutToggle } from "@/components/ui/layout-toggle";
 import { useCatalogLayout } from "@/lib/catalog-layout";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SortSelect } from "@/components/admin/sort-select";
+import { formatBytes } from "@/lib/format";
+import type { ListSort } from "@/lib/sort";
 import type { PaginatedResult, Video, VideoStatus } from "@/lib/types";
 
 const STATUS_FILTERS: { label: string; value: VideoStatus | "all" }[] = [
@@ -27,6 +30,7 @@ export default function AdminVideosPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<VideoStatus | "all">("all");
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<ListSort>("uploaded_newest");
   const [toDelete, setToDelete] = useState<Video | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [layout, setLayout] = useCatalogLayout();
@@ -35,8 +39,9 @@ export default function AdminVideosPage() {
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (search) params.set("search", search);
     if (status !== "all") params.set("status", status);
+    params.set("sort", sort);
     return params.toString();
-  }, [page, search, status]);
+  }, [page, search, status, sort]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -112,6 +117,13 @@ export default function AdminVideosPage() {
             </button>
           ))}
         </div>
+        <SortSelect
+          value={sort}
+          onChange={(next) => {
+            setPage(1);
+            setSort(next);
+          }}
+        />
         <LayoutToggle layout={layout} onChange={setLayout} />
       </div>
 
@@ -140,6 +152,8 @@ export default function AdminVideosPage() {
                   <p className="text-sm text-muted">{video.city || video.location || "—"}</p>
                   <p className="text-sm text-muted">
                     {video.recorded_at ? new Date(video.recorded_at).toLocaleDateString() : "—"}
+                    {" · "}
+                    {video.file_size_bytes ? formatBytes(video.file_size_bytes) : "—"}
                   </p>
                   <div className="flex justify-end gap-1.5">
                     <Link
@@ -204,6 +218,7 @@ export default function AdminVideosPage() {
                   <th className="px-4 py-3 font-medium">Title</th>
                   <th className="px-4 py-3 font-medium">Location</th>
                   <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium">Size</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
@@ -222,6 +237,9 @@ export default function AdminVideosPage() {
                     <td className="px-4 py-3 text-muted">{video.city || video.location || "—"}</td>
                     <td className="px-4 py-3 text-muted">
                       {video.recorded_at ? new Date(video.recorded_at).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted">
+                      {video.file_size_bytes ? formatBytes(video.file_size_bytes) : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={video.status} />

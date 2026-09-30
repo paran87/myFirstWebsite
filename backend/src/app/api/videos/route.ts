@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, tryGetAdmin } from "@/lib/auth";
+import { applyListSort } from "@/lib/sort";
 import { jsonOk, handleApiError, jsonError } from "@/lib/api-response";
 import { createVideoSchema, listVideosQuerySchema } from "@/lib/validation";
 import type { PaginatedResult, Video } from "@/lib/types";
@@ -76,16 +77,7 @@ export async function GET(request: NextRequest) {
     if (query.dateFrom) builder = builder.gte("recorded_at", query.dateFrom);
     if (query.dateTo) builder = builder.lte("recorded_at", query.dateTo);
 
-    switch (query.sort) {
-      case "oldest":
-        builder = builder.order("recorded_at", { ascending: true, nullsFirst: false });
-        break;
-      case "most_viewed":
-        builder = builder.order("views", { ascending: false });
-        break;
-      default:
-        builder = builder.order("recorded_at", { ascending: false, nullsFirst: false });
-    }
+    builder = applyListSort(builder, query.sort);
 
     const { data, error, count } = await builder.range(from, to);
     if (error) throw error;
