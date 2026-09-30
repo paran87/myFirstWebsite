@@ -100,7 +100,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/vi
         <FiltersBar categories={categories} />
       </div>
 
-      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(17rem,0.85fr)_minmax(0,2.2fr)_minmax(19rem,1fr)] 2xl:gap-6">
+      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(17rem,0.75fr)] 2xl:gap-6">
         <div className="order-2 min-w-0 xl:order-none">
           <VideoLocationPanel video={video} />
         </div>

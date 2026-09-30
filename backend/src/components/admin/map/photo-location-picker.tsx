@@ -14,6 +14,12 @@ export interface ExtraMarker {
   position: LatLng;
 }
 
+/** Keeps what the user typed ("14.", "14.50") unless the number itself changed. */
+function syncText(current: string, next: number | undefined): string {
+  if (next === undefined) return "";
+  return current.trim() !== "" && Number(current) === next ? current : String(next);
+}
+
 function ClickToPlace({ onPick }: { onPick: (value: LatLng) => void }) {
   useMapEvents({
     click(event) {
@@ -58,15 +64,22 @@ export function PhotoLocationPicker({
   // Keep the text boxes in sync when the pin moves on the map.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror external value into inputs
-    setLatText(value ? String(value[0]) : "");
-    setLngText(value ? String(value[1]) : "");
+    setLatText((current) => syncText(current, value?.[0]));
+    setLngText((current) => syncText(current, value?.[1]));
   }, [value]);
 
+  // Applied as you type (once both numbers are valid), not only on blur, so
+  // pressing Enter to save never drops a typed coordinate.
   function commitText(lat: string, lng: string) {
-    if (lat.trim() === "" && lng.trim() === "") return onChange(null);
+    if (lat.trim() === "" && lng.trim() === "") {
+      if (value) onChange(null);
+      return;
+    }
     const a = Number(lat);
     const b = Number(lng);
-    if (lat.trim() !== "" && lng.trim() !== "" && isLatLng(a, b)) onChange([roundCoord(a), roundCoord(b)]);
+    if (lat.trim() !== "" && lng.trim() !== "" && isLatLng(a, b) && (a !== value?.[0] || b !== value?.[1])) {
+      onChange([roundCoord(a), roundCoord(b)]);
+    }
   }
 
   return (
@@ -112,7 +125,10 @@ export function PhotoLocationPicker({
             step="any"
             value={latText}
             placeholder="14.5995"
-            onChange={(e) => setLatText(e.target.value)}
+            onChange={(e) => {
+              setLatText(e.target.value);
+              commitText(e.target.value, lngText);
+            }}
             onBlur={() => commitText(latText, lngText)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
           />
@@ -124,7 +140,10 @@ export function PhotoLocationPicker({
             step="any"
             value={lngText}
             placeholder="120.9842"
-            onChange={(e) => setLngText(e.target.value)}
+            onChange={(e) => {
+              setLngText(e.target.value);
+              commitText(latText, e.target.value);
+            }}
             onBlur={() => commitText(latText, lngText)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
           />

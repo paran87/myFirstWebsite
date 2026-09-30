@@ -37,6 +37,7 @@ export function PhotoWatchFrame({
   const filterKey = searchParams.toString();
   const [photos, setPhotos] = useState(initialPhotos);
   const [fullscreen, setFullscreen] = useState(false);
+  const [activePhoto, setActivePhoto] = useState<Photo | null>(null);
 
   // The server already sent the unfiltered list, so skip the first fetch
   // unless the page was opened with filters.
@@ -60,8 +61,8 @@ export function PhotoWatchFrame({
   }, [filterKey]);
 
   const value = useMemo(
-    () => ({ photos, query: filterKey, fullscreen, setFullscreen }),
-    [photos, filterKey, fullscreen]
+    () => ({ photos, query: filterKey, fullscreen, setFullscreen, activePhoto, setActivePhoto }),
+    [photos, filterKey, fullscreen, activePhoto]
   );
 
   return (
@@ -79,7 +80,7 @@ export function PhotoWatchFrame({
           <FiltersBar categories={categories} />
         </div>
 
-        <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(17rem,0.85fr)_minmax(0,2.2fr)_minmax(19rem,1fr)] 2xl:gap-6">
+        <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(17rem,0.75fr)] 2xl:gap-6">
           <div className="order-2 min-w-0 xl:order-none">
             <PhotoMapPanel />
           </div>

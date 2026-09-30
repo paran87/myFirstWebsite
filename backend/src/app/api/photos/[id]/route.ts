@@ -7,6 +7,7 @@ import { updatePhotoSchema } from "@/lib/validation";
 import type { Photo } from "@/lib/types";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
 import { uploadConfig } from "@/lib/config";
+import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -31,13 +32,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (error) throw error;
     if (!data) return jsonError("Photo not found.", 404);
 
-    return jsonOk<Photo>(data as unknown as Photo, {
-      headers: {
-        ...corsHeaders(request),
-        // Same short CDN cache as the list endpoints; admins always get fresh data.
-        ...(admin ? {} : { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" }),
-      },
-    });
+    return jsonOk<Photo>(data as unknown as Photo, { headers: corsHeaders(request) });
   } catch (error) {
     return handleApiError(error);
   }
@@ -55,6 +50,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (error) throw error;
     if (!data) return jsonError("Photo not found.", 404);
 
+    await revalidateFrontend(["photos", `photo:${id}`]);
     return jsonOk<Photo>(data as unknown as Photo);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);
@@ -81,6 +77,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       if (error) throw error;
       if (!data) return jsonError("Photo not found.", 404);
 
+      await revalidateFrontend(["photos", `photo:${id}`]);
       return jsonOk({ success: true, mode: "soft" });
     }
 
@@ -99,6 +96,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const { error: deleteError } = await admin.from("photos").delete().eq("id", id);
     if (deleteError) throw deleteError;
 
+    await revalidateFrontend(["photos", `photo:${id}`]);
     return jsonOk({ success: true, mode: "permanent" });
   } catch (error) {
     return handleApiError(error);

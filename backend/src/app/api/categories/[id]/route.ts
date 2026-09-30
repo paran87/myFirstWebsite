@@ -5,6 +5,7 @@ import { jsonOk, jsonError, handleApiError } from "@/lib/api-response";
 import { updateCategorySchema, slugify } from "@/lib/validation";
 import type { Category } from "@/lib/types";
 import type { Database } from "@/lib/supabase/database.types";
+import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 type CategoryUpdate = Database["public"]["Tables"]["categories"]["Update"];
 
@@ -36,6 +37,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
     if (!data) return jsonError("Category not found.", 404);
 
+    await revalidateFrontend(["categories", "videos", "photos"]);
     return jsonOk<Category>(data as unknown as Category);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);
@@ -57,6 +59,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const { error } = await admin.from("categories").delete().eq("id", id);
     if (error) throw error;
 
+    await revalidateFrontend(["categories", "videos", "photos"]);
     return jsonOk({ success: true });
   } catch (error) {
     return handleApiError(error);

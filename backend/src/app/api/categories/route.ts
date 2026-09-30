@@ -6,6 +6,7 @@ import { jsonOk, handleApiError, jsonError } from "@/lib/api-response";
 import { createCategorySchema, slugify } from "@/lib/validation";
 import type { Category } from "@/lib/types";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
+import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request);
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
+    await revalidateFrontend(["categories"]);
     return jsonOk<Category>(data as unknown as Category, 201);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);

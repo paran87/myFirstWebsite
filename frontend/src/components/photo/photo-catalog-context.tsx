@@ -8,11 +8,16 @@ export const PhotoCatalogContext = createContext<{
   query: string;
   fullscreen: boolean;
   setFullscreen: (open: boolean) => void;
+  /** The photo being viewed, as loaded by its own page (freshest data). */
+  activePhoto: Photo | null;
+  setActivePhoto: (photo: Photo) => void;
 }>({
   photos: [],
   query: "",
   fullscreen: false,
   setFullscreen: () => {},
+  activePhoto: null,
+  setActivePhoto: () => {},
 });
 
 export function usePhotoCatalog() {

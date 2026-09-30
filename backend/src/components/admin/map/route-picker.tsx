@@ -20,6 +20,12 @@ export const ROUTE_COLORS: Record<VideoRouteMode, string> = {
   straight: "#2563eb",
 };
 
+/** Keeps what the user typed ("14.", "14.50") unless the number itself changed. */
+function syncText(current: string, next: number | undefined): string {
+  if (next === undefined) return "";
+  return current.trim() !== "" && Number(current) === next ? current : String(next);
+}
+
 function ClickToAdd({ onAdd }: { onAdd: (point: LatLng) => void }) {
   useMapEvents({
     click(event) {
@@ -57,20 +63,43 @@ function PointInputs({
   const [lng, setLng] = useState(String(point[1]));
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror dragged/clicked point into inputs
-    setLat(String(point[0]));
-    setLng(String(point[1]));
+    setLat((current) => syncText(current, point[0]));
+    setLng((current) => syncText(current, point[1]));
   }, [point]);
-  const commit = () => {
-    const a = Number(lat);
-    const b = Number(lng);
-    if (isLatLng(a, b)) onCommit([roundCoord(a), roundCoord(b)]);
+  const commit = (latText = lat, lngText = lng) => {
+    if (latText.trim() === "" || lngText.trim() === "") return;
+    const a = Number(latText);
+    const b = Number(lngText);
+    if (isLatLng(a, b) && (a !== point[0] || b !== point[1])) onCommit([roundCoord(a), roundCoord(b)]);
   };
   const cls =
     "w-full min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-xs tabular-nums outline-none ring-primary/40 focus:ring-2";
   return (
     <>
-      <input aria-label="Latitude" type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} onBlur={commit} className={cls} />
-      <input aria-label="Longitude" type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} onBlur={commit} className={cls} />
+      <input
+        aria-label="Latitude"
+        type="number"
+        step="any"
+        value={lat}
+        onChange={(e) => {
+          setLat(e.target.value);
+          commit(e.target.value, lng);
+        }}
+        onBlur={() => commit()}
+        className={cls}
+      />
+      <input
+        aria-label="Longitude"
+        type="number"
+        step="any"
+        value={lng}
+        onChange={(e) => {
+          setLng(e.target.value);
+          commit(lat, e.target.value);
+        }}
+        onBlur={() => commit()}
+        className={cls}
+      />
     </>
   );
 }
@@ -79,18 +108,25 @@ function PointInputs({
  * Start/end coordinates for a video plus the route between them. The first
  * click sets the start, the next the end; further clicks extend the route
  * (the previous end becomes a stop). Pins can be dragged or typed in.
+ *
+ * `onChange` receives the route (null until there are two points) and the
+ * start point on its own, so a video with just one known location still
+ * gets saved. `initialPoint` seeds the start for videos that only have a
+ * latitude/longitude from before routes existed.
  */
 export function RoutePicker({
   value,
+  initialPoint = null,
   onChange,
   height = 420,
 }: {
   value: VideoRoute | null;
-  onChange: (route: VideoRoute | null) => void;
+  initialPoint?: LatLng | null;
+  onChange: (route: VideoRoute | null, start: LatLng | null) => void;
   height?: number;
 }) {
   const [mode, setMode] = useState<VideoRouteMode>(value?.mode ?? "walking");
-  const [points, setPoints] = useState<LatLng[]>(value?.points ?? []);
+  const [points, setPoints] = useState<LatLng[]>(value?.points ?? (initialPoint ? [initialPoint] : []));
   const [path, setPath] = useState<LatLng[]>(value?.path ?? []);
   const [distance, setDistance] = useState<number | null>(value?.distance_m ?? null);
   const [routing, setRouting] = useState(false);
@@ -109,7 +145,7 @@ export function RoutePicker({
       if (value && value.path.length >= 2) return;
     }
     if (points.length < 2) {
-      onChangeRef.current(null);
+      onChangeRef.current(null, points[0] ?? null);
       return;
     }
     const controller = new AbortController();
@@ -120,7 +156,7 @@ export function RoutePicker({
         setPath(result.route.path);
         setDistance(result.route.distance_m ?? null);
         setFellBack(result.fellBack);
-        onChangeRef.current(result.route);
+        onChangeRef.current(result.route, points[0]);
       } catch {
         // aborted by a newer change
       } finally {
@@ -217,7 +253,7 @@ export function RoutePicker({
           {points.length === 0
             ? "Click the map to set the START point"
             : points.length === 1
-              ? "Now click to set the END point"
+              ? "Click to set the END point (or save with just this location)"
               : "Click to extend the route · drag pins to adjust"}
         </div>
       </div>

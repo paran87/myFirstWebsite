@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { UploadCloud, X, Loader2, MapPin, Route as RouteIcon } from "lucide-react";
@@ -10,7 +10,8 @@ import { captureVideoThumbnailFile } from "@/lib/capture-video-thumbnail";
 import { AdminVideoThumbnail } from "@/components/admin/video-thumbnail";
 import { isGeneratedPlaceholderThumbnail } from "@/lib/thumbnail";
 import { METRO_MANILA_CITIES } from "@/lib/types";
-import type { Category, Video, VideoRoute, VideoStatus } from "@/lib/types";
+import type { Category, LatLng, Video, VideoRoute, VideoStatus } from "@/lib/types";
+import { isLatLng } from "@/lib/geo";
 import { RoutePicker } from "@/components/admin/map";
 
 interface VideoFormProps {
@@ -54,6 +55,16 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
   const [province, setProvince] = useState(initialVideo?.province ?? "Metro Manila");
   const [region, setRegion] = useState(initialVideo?.region ?? "NCR");
   const [route, setRoute] = useState<VideoRoute | null>(initialVideo?.route ?? null);
+  // Videos saved before routes existed may only have a single point.
+  const legacyPoint: LatLng | null =
+    initialVideo && isLatLng(initialVideo.latitude, initialVideo.longitude)
+      ? [Number(initialVideo.latitude), Number(initialVideo.longitude)]
+      : null;
+  const [startPoint, setStartPoint] = useState<LatLng | null>(initialVideo?.route?.points[0] ?? legacyPoint);
+  const handleRouteChange = useCallback((next: VideoRoute | null, start: LatLng | null) => {
+    setRoute(next);
+    setStartPoint(start);
+  }, []);
   const [recordedDate, setRecordedDate] = useState(
     initialVideo?.recorded_at ? initialVideo.recorded_at.slice(0, 10) : ""
   );
@@ -213,8 +224,8 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
         region: region.trim() || null,
         location: [street, barangay, city].filter(Boolean).join(", ") || null,
         // The start point doubles as the video's single location.
-        latitude: route ? route.points[0][0] : null,
-        longitude: route ? route.points[0][1] : null,
+        latitude: startPoint ? startPoint[0] : null,
+        longitude: startPoint ? startPoint[1] : null,
         // Only sent when a route is (or was) set, so saving still works before
         // migration 0005 adds the column.
         ...(route || initialVideo?.route ? { route } : {}),
@@ -524,7 +535,7 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
             Leave empty if unknown — visitors will see that no location has been set.
           </p>
         </div>
-        <RoutePicker value={route} onChange={setRoute} />
+        <RoutePicker value={route} initialPoint={legacyPoint} onChange={handleRouteChange} />
       </section>
 
       {/* Categorization */}

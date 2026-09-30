@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ExternalLink, Images } from "lucide-react";
 import { PhotoLocationsMap } from "@/components/map";
 import type { PhotoPin } from "@/components/map/photo-locations-map";
 import { CoordRow, LocationPanel, formatLatLng } from "@/components/map/location-panel";
 import { usePhotoCatalog } from "@/components/photo/photo-catalog-context";
-import { getPhoto } from "@/lib/api";
 import type { LatLng, Photo } from "@/lib/types";
 
 function positionOf(photo: Pick<Photo, "latitude" | "longitude">): LatLng | null {
@@ -18,36 +17,24 @@ function positionOf(photo: Pick<Photo, "latitude" | "longitude">): LatLng | null
 }
 
 export function PhotoMapPanel() {
-  const { photos, query } = usePhotoCatalog();
+  const { photos, query, activePhoto } = usePhotoCatalog();
   const router = useRouter();
   const params = useParams();
   const activeId = String(params.id ?? "");
 
-  // The photo being viewed may be outside the loaded gallery page; fetch it then.
+  // Prefer the photo page's own data: the gallery list can be older (e.g. a
+  // location just added in the admin), and may not contain this photo at all.
   const inList = photos.find((photo) => photo.id === activeId) ?? null;
-  const [fetched, setFetched] = useState<Photo | null>(null);
-  useEffect(() => {
-    if (inList || !activeId) return;
-    let cancelled = false;
-    getPhoto(activeId)
-      .then((photo) => {
-        if (!cancelled) setFetched(photo);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [activeId, inList]);
-  const active = inList ?? (fetched?.id === activeId ? fetched : null);
+  const active = activePhoto?.id === activeId ? activePhoto : inList;
 
   const pins = useMemo<PhotoPin[]>(() => {
-    const list = active && !inList ? [...photos, active] : photos;
+    const list = photos.map((photo) => (active && photo.id === active.id ? active : photo));
+    if (active && !photos.some((photo) => photo.id === active.id)) list.push(active);
     return list.flatMap((photo) => {
       const position = positionOf(photo);
       return position ? [{ id: photo.id, title: photo.title, position }] : [];
     });
-  }, [photos, active, inList]);
-
+  }, [photos, active]);
   const activePosition = active ? positionOf(active) : null;
   const place = active ? [active.street, active.barangay, active.city].filter(Boolean).join(", ") : "";
 

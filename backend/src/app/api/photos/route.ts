@@ -7,6 +7,7 @@ import { jsonOk, handleApiError, jsonError } from "@/lib/api-response";
 import { createPhotoSchema, createPhotosBatchSchema, listPhotosQuerySchema } from "@/lib/validation";
 import type { PaginatedResult, Photo } from "@/lib/types";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
+import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request);
@@ -74,12 +75,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.max(1, Math.ceil(total / query.limit)),
     };
 
-    return jsonOk(result, {
-      headers: {
-        ...corsHeaders(request),
-        ...(admin ? {} : { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" }),
-      },
-    });
+    return jsonOk(result, { headers: corsHeaders(request) });
   } catch (error) {
     return handleApiError(error);
   }
@@ -102,6 +98,7 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error;
 
+      await revalidateFrontend(["photos"]);
       return jsonOk({ data: (data ?? []) as unknown as Photo[], count: data?.length ?? 0 }, 201);
     }
 
@@ -114,6 +111,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    await revalidateFrontend(["photos"]);
     return jsonOk<Photo>(data as unknown as Photo, 201);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);

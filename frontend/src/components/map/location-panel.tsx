@@ -31,7 +31,7 @@ export function LocationPanel({
         </div>
       </div>
 
-      <div className="relative h-[22rem] min-h-[18rem] overflow-hidden rounded-xl border border-border sm:h-[26rem] xl:h-auto xl:flex-1">
+      <div className="relative h-[26rem] min-h-[18rem] overflow-hidden rounded-xl border border-border sm:h-[34rem] xl:h-auto xl:flex-1">
         {map}
         {empty && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-surface/70 p-5 backdrop-blur-[2px]">

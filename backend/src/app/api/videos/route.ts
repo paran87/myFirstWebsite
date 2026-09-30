@@ -7,6 +7,7 @@ import { jsonOk, handleApiError, jsonError } from "@/lib/api-response";
 import { createVideoSchema, listVideosQuerySchema } from "@/lib/validation";
 import type { PaginatedResult, Video } from "@/lib/types";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
+import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request);
@@ -91,12 +92,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.max(1, Math.ceil(total / query.limit)),
     };
 
-    return jsonOk(result, {
-      headers: {
-        ...corsHeaders(request),
-        ...(admin ? {} : { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" }),
-      },
-    });
+    return jsonOk(result, { headers: corsHeaders(request) });
   } catch (error) {
     return handleApiError(error);
   }
@@ -122,6 +118,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    await revalidateFrontend(["videos"]);
     return jsonOk<Video>(data as unknown as Video, 201);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);

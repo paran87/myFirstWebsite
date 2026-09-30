@@ -7,6 +7,7 @@ import { updateVideoSchema } from "@/lib/validation";
 import type { Video } from "@/lib/types";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
 import { removeLocalUpload } from "@/lib/local-storage";
+import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -32,13 +33,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (error) throw error;
     if (!data) return jsonError("Video not found.", 404);
 
-    return jsonOk<Video>(data as unknown as Video, {
-      headers: {
-        ...corsHeaders(request),
-        // Same short CDN cache as the list endpoints; admins always get fresh data.
-        ...(admin ? {} : { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" }),
-      },
-    });
+    return jsonOk<Video>(data as unknown as Video, { headers: corsHeaders(request) });
   } catch (error) {
     return handleApiError(error);
   }
@@ -62,6 +57,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (error) throw error;
     if (!data) return jsonError("Video not found.", 404);
 
+    await revalidateFrontend(["videos", `video:${id}`]);
     return jsonOk<Video>(data as unknown as Video);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);
@@ -94,6 +90,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       if (error) throw error;
       if (!data) return jsonError("Video not found.", 404);
 
+      await revalidateFrontend(["videos", `video:${id}`]);
       return jsonOk({ success: true, mode: "soft" });
     }
 
@@ -119,6 +116,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const { error: deleteError } = await admin.from("videos").delete().eq("id", id);
     if (deleteError) throw deleteError;
 
+    await revalidateFrontend(["videos", `video:${id}`]);
     return jsonOk({ success: true, mode: "permanent" });
   } catch (error) {
     return handleApiError(error);

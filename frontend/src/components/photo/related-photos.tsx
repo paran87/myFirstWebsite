@@ -40,7 +40,7 @@ export function RelatedPhotos({ photos }: { photos: Photo[] }) {
           className={
             layout === "list"
               ? "flex min-h-0 flex-col gap-2 overflow-y-auto pr-1"
-              : "grid min-h-0 auto-rows-max grid-cols-1 content-start items-start gap-3 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-1 min-[1800px]:grid-cols-2"
+              : "grid min-h-0 auto-rows-max grid-cols-1 content-start items-start gap-3 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-1 min-[2200px]:grid-cols-2"
           }
         >
           {photos.map((photo, index) => (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { MapPin, Calendar, Eye, Tag as TagIcon, UploadCloud } from "lucide-react";
 import { PhotoViewer } from "@/components/photo/photo-viewer";
 import { usePhotoCatalog } from "@/components/photo/photo-catalog-context";
@@ -7,7 +8,12 @@ import { formatDate, formatViews } from "@/lib/format";
 import type { Photo } from "@/lib/types";
 
 export function PhotoStage({ photo }: { photo: Photo }) {
-  const { photos, query } = usePhotoCatalog();
+  const { photos, query, setActivePhoto } = usePhotoCatalog();
+
+  // Share this page's copy of the photo (with its latest coordinates) with the map.
+  useEffect(() => {
+    setActivePhoto(photo);
+  }, [photo, setActivePhoto]);
 
   const locationLine = [photo.street, photo.barangay, photo.city, photo.province]
     .filter(Boolean)

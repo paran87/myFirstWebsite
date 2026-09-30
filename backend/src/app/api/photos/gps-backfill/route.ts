@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { jsonOk, handleApiError } from "@/lib/api-response";
 import { isLatLng, roundCoord } from "@/lib/geo";
+import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -99,6 +100,8 @@ export async function POST(request: Request) {
         })
       );
     }
+
+    if (updated.length > 0) await revalidateFrontend(["photos", ...updated.map((id) => `photo:${id}`)]);
 
     const remaining = Math.max(0, (count ?? rows.length) - rows.length);
     return jsonOk({
