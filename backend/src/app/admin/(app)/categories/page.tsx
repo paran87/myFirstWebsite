@@ -120,7 +120,7 @@ export default function CategoriesPage() {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Flood-Prone Area"
+            placeholder="e.g. Landmarks & Monuments"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
           />
         </div>
