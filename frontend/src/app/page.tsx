@@ -1,10 +1,6 @@
-import { Clapperboard } from "lucide-react";
 import { getCategories, getVideos } from "@/lib/api";
-import { CatalogTabs } from "@/components/layout/catalog-tabs";
-import { FiltersBar } from "@/components/video/filters-bar";
-import { VideoGrid } from "@/components/video/video-grid";
+import { CatalogBrowser } from "@/components/layout/catalog-browser";
 import { Hero } from "@/components/layout/hero";
-import { ErrorState } from "@/components/ui/states";
 import type { VideoListParams } from "@/lib/api";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -44,36 +40,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       )}
 
       <section id="catalog" data-reveal className="page-shell p-5 sm:p-6 lg:p-8">
-      <CatalogTabs />
-
-      <div className="mb-6 mt-2 flex flex-col gap-1.5">
-        <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-primary">
-          <Clapperboard className="h-4 w-4" />
-          The video archive
-        </p>
-        <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-          {params.search ? (
-            <>
-              Results for <span className="text-gradient">&ldquo;{params.search}&rdquo;</span>
-            </>
-          ) : (
-            "Latest Documentation"
-          )}
-        </h2>
-        <p className="text-base font-medium text-foreground/75 sm:text-lg">
-          {result ? `${result.total.toLocaleString()} video${result.total === 1 ? "" : "s"} available` : "Browse the public catalog"}
-        </p>
-      </div>
-
-      <div className="mb-6">
-        <FiltersBar categories={categories} />
-      </div>
-
-      {loadError ? (
-        <ErrorState message={loadError} />
-      ) : (
-        result && <VideoGrid key={gridKey} initialResult={result} params={params} />
-      )}
+        <CatalogBrowser
+          key={gridKey}
+          initialKind="video"
+          initialVideos={result ?? null}
+          loadError={loadError}
+          categories={categories}
+          params={params}
+        />
       </section>
     </main>
   );
