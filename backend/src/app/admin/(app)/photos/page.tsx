@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Eye, Pencil, Trash2, Search, ZoomIn } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Search, ZoomIn, LocateFixed, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -35,6 +35,44 @@ export default function AdminPhotosPage() {
   const [deleting, setDeleting] = useState(false);
   const [layout, setLayout] = useCatalogLayout();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [gpsProgress, setGpsProgress] = useState<string | null>(null);
+
+  /** Reads GPS from photo files missing coordinates, batch by batch. */
+  async function readGpsFromFiles() {
+    const skip: string[] = [];
+    let updated = 0;
+    let withoutGps = 0;
+    let failed = 0;
+    setGpsProgress("Reading GPS from photo files…");
+    try {
+      for (;;) {
+        const batch = await apiFetch<{ checked: number; updated: number; noGps: string[]; failed: string[]; remaining: number }>(
+          "/api/photos/gps-backfill",
+          { method: "POST", body: JSON.stringify({ skip }) }
+        );
+        updated += batch.updated;
+        withoutGps += batch.noGps.length;
+        failed += batch.failed.length;
+        skip.push(...batch.noGps, ...batch.failed);
+        setGpsProgress(`Reading GPS… ${updated} located, ${batch.remaining} left`);
+        if (batch.checked === 0 || batch.remaining === 0) break;
+      }
+      if (updated === 0 && withoutGps === 0 && failed === 0) {
+        toast.success("All photos already have coordinates.");
+      } else {
+        toast.success(
+          `Located ${updated} photo${updated === 1 ? "" : "s"}.` +
+            (withoutGps ? ` ${withoutGps} have no GPS in the file — set those on the map in Edit.` : "") +
+            (failed ? ` ${failed} couldn't be read.` : "")
+        );
+      }
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't read GPS from photos.");
+    } finally {
+      setGpsProgress(null);
+    }
+  }
 
   const previewItems = useMemo<PreviewItem[]>(
     () =>
@@ -74,7 +112,6 @@ export default function AdminPhotosPage() {
   }, [queryString]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
@@ -100,6 +137,17 @@ export default function AdminPhotosPage() {
           <h1 className="text-xl font-semibold">Photos</h1>
           <p className="text-sm text-muted">Manage street documentation still images.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={readGpsFromFiles}
+          disabled={gpsProgress !== null}
+          title="Read the GPS position stored in each photo file and save it for photos without coordinates"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium hover:bg-border disabled:opacity-60"
+        >
+          {gpsProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+          {gpsProgress ?? "Read GPS from photos"}
+        </button>
         <Link
           href="/admin/photos/new"
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
@@ -107,6 +155,7 @@ export default function AdminPhotosPage() {
           <Plus className="h-4 w-4" />
           Add Photos
         </Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -176,7 +225,12 @@ export default function AdminPhotosPage() {
                   <h2 className="line-clamp-2 font-semibold">{photo.title}</h2>
                   <StatusBadge status={photo.status} />
                 </div>
-                <p className="text-sm text-muted">{photo.city || photo.location || "—"}</p>
+                <p className="flex items-center gap-1 text-sm text-muted">
+                  {photo.latitude != null && photo.longitude != null && (
+                    <MapPin className="h-3.5 w-3.5 text-primary" aria-label="Has coordinates" />
+                  )}
+                  {photo.city || photo.location || "—"}
+                </p>
                 <p className="text-sm text-muted">
                   {photo.recorded_at ? new Date(photo.recorded_at).toLocaleDateString() : "—"}
                   {" · "}
@@ -254,7 +308,14 @@ export default function AdminPhotosPage() {
                     </button>
                   </td>
                   <td className="max-w-[220px] truncate px-4 py-3 font-medium">{photo.title}</td>
-                  <td className="px-4 py-3 text-muted">{photo.city || photo.location || "—"}</td>
+                  <td className="px-4 py-3 text-muted">
+                    <span className="inline-flex items-center gap-1">
+                      {photo.latitude != null && photo.longitude != null && (
+                        <MapPin className="h-3.5 w-3.5 text-primary" aria-label="Has coordinates" />
+                      )}
+                      {photo.city || photo.location || "—"}
+                    </span>
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted">
                     {photo.recorded_at ? new Date(photo.recorded_at).toLocaleDateString() : "—"}
                   </td>

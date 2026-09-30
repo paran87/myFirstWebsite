@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { UploadCloud, X, Loader2, MapPin } from "lucide-react";
+import { UploadCloud, X, Loader2, MapPin, LocateFixed, Crosshair } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { uploadFileWithProgress, uploadPhotoFilesWithProgress, CLIENT_UPLOAD_LIMITS } from "@/lib/upload";
 import { METRO_MANILA_CITIES } from "@/lib/types";
-import type { Category, Photo, VideoStatus } from "@/lib/types";
+import type { Category, LatLng, Photo, VideoStatus } from "@/lib/types";
+import { PhotoLocationPicker } from "@/components/admin/map";
+import { isLatLng, readPhotoGps } from "@/lib/geo";
 
 interface PhotoFormProps {
   mode: "create" | "edit";
@@ -15,6 +17,10 @@ interface PhotoFormProps {
 }
 
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function fileKey(file: File) {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
 
 function photoMime(file: File): string {
   if (file.type && file.type !== "application/octet-stream") return file.type;
@@ -35,8 +41,14 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
   const [city, setCity] = useState(initialPhoto?.city ?? "");
   const [province, setProvince] = useState(initialPhoto?.province ?? "Metro Manila");
   const [region, setRegion] = useState(initialPhoto?.region ?? "NCR");
-  const [latitude, setLatitude] = useState(initialPhoto?.latitude?.toString() ?? "");
-  const [longitude, setLongitude] = useState(initialPhoto?.longitude?.toString() ?? "");
+  const [coords, setCoords] = useState<LatLng | null>(
+    initialPhoto && isLatLng(initialPhoto.latitude, initialPhoto.longitude)
+      ? [Number(initialPhoto.latitude), Number(initialPhoto.longitude)]
+      : null
+  );
+  // GPS read from each selected file's EXIF: undefined = still reading, null = none.
+  const [fileGps, setFileGps] = useState<Record<string, LatLng | null>>({});
+  const [readingExisting, setReadingExisting] = useState(false);
   const [recordedDate, setRecordedDate] = useState(
     initialPhoto?.recorded_at ? initialPhoto.recorded_at.slice(0, 10) : ""
   );
@@ -73,7 +85,31 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
     };
   }, [imageFiles, initialPhoto]);
 
+  function readGpsFor(files: File[], { replaceCoords = false } = {}) {
+    for (const file of files) {
+      readPhotoGps(file).then((gps) => {
+        setFileGps((current) => ({ ...current, [fileKey(file)]: gps }));
+        // The first GPS found fills the pin (it also covers files without GPS).
+        if (gps) setCoords((current) => (replaceCoords ? gps : current ?? gps));
+      });
+    }
+  }
+
+  async function readGpsFromExistingPhoto() {
+    if (!initialPhoto) return;
+    setReadingExisting(true);
+    const gps = await readPhotoGps(initialPhoto.image_url);
+    setReadingExisting(false);
+    if (gps) {
+      setCoords(gps);
+      toast.success("Location read from the photo's GPS data.");
+    } else {
+      toast.error("This photo file has no GPS data. Click the map to set the location.");
+    }
+  }
+
   function addImageFiles(incoming: File[]) {
+    readGpsFor(incoming);
     setImageFiles((current) => {
       const seen = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
       const extra = incoming.filter((file) => !seen.has(`${file.name}:${file.size}:${file.lastModified}`));
@@ -121,8 +157,8 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
         province: province.trim() || null,
         region: region.trim() || null,
         location: [street, barangay, city].filter(Boolean).join(", ") || null,
-        latitude: latitude ? Number(latitude) : null,
-        longitude: longitude ? Number(longitude) : null,
+        latitude: coords ? coords[0] : null,
+        longitude: coords ? coords[1] : null,
         recorded_at: recordedDate ? new Date(`${recordedDate}T00:00:00Z`).toISOString() : null,
         category_id: categoryId || null,
         tags,
@@ -153,8 +189,14 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
         setUploadStage("Saving photo records...");
         setUploadPercent(null);
 
-        const photos = uploaded.map((file, index) => ({
+        const photos = uploaded.map((file, index) => {
+          const source = imageFiles[index];
+          // Each photo keeps its own GPS; the map pin covers photos without it.
+          const gps = (source && fileGps[fileKey(source)]) || coords;
+          return {
           ...shared,
+          latitude: gps ? gps[0] : null,
+          longitude: gps ? gps[1] : null,
           title:
             imageFiles.length === 1
               ? title.trim()
@@ -162,7 +204,8 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
           image_url: file.publicUrl,
           storage_path: file.path,
           file_size_bytes: file.fileSizeBytes,
-        }));
+          };
+        });
 
         await apiFetch("/api/photos", {
           method: "POST",
@@ -222,6 +265,7 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
   }
 
   const isUploading = uploadStage !== null;
+  const gpsFoundCount = imageFiles.filter((file) => fileGps[fileKey(file)]).length;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-24">
@@ -259,8 +303,10 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
             className="hidden"
             onChange={(e) => {
               const incoming = Array.from(e.target.files ?? []);
-              if (mode === "edit") setImageFiles(incoming.slice(0, 1));
-              else addImageFiles(incoming);
+              if (mode === "edit") {
+                setImageFiles(incoming.slice(0, 1));
+                readGpsFor(incoming.slice(0, 1), { replaceCoords: true });
+              } else addImageFiles(incoming);
               e.target.value = "";
             }}
           />
@@ -268,8 +314,19 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
         {imageFiles.length > 0 && (
           <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-muted">
             {imageFiles.map((file) => (
-              <li key={`${file.name}:${file.size}:${file.lastModified}`} className="flex items-center justify-between gap-2">
+              <li key={fileKey(file)} className="flex items-center justify-between gap-2">
                 <span className="truncate">{file.name}</span>
+                <span className="ml-auto shrink-0">
+                  {fileGps[fileKey(file)] === undefined ? (
+                    <span className="text-muted">Reading GPS…</span>
+                  ) : fileGps[fileKey(file)] ? (
+                    <span className="inline-flex items-center gap-1 text-success">
+                      <LocateFixed className="h-3 w-3" /> GPS found
+                    </span>
+                  ) : (
+                    <span className="text-warning">No GPS</span>
+                  )}
+                </span>
                 <button
                   type="button"
                   onClick={() => setImageFiles((files) => files.filter((item) => item !== file))}
@@ -343,6 +400,42 @@ export function PhotoForm({ mode, initialPhoto }: PhotoFormProps) {
             ))}
           </select>
           <input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+        </div>
+
+        <div className="space-y-2 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="flex items-center gap-1.5 text-sm font-medium">
+              <Crosshair className="h-4 w-4 text-primary" /> Coordinates
+            </h3>
+            {mode === "edit" && initialPhoto && imageFiles.length === 0 && (
+              <button
+                type="button"
+                onClick={readGpsFromExistingPhoto}
+                disabled={readingExisting}
+                className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-border disabled:opacity-50"
+              >
+                {readingExisting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LocateFixed className="h-3.5 w-3.5" />}
+                Read GPS from photo file
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-muted">
+            {mode === "create" && imageFiles.length > 1
+              ? `${gpsFoundCount} of ${imageFiles.length} photos have GPS in the file and will use it (grey pins). The pin you place is used for the rest.`
+              : "Read automatically from the photo's GPS when available. Click the map or drag the pin to set or correct it."}
+          </p>
+          <PhotoLocationPicker
+            value={coords}
+            onChange={setCoords}
+            extras={
+              mode === "create" && imageFiles.length > 1
+                ? imageFiles.flatMap((file) => {
+                    const gps = fileGps[fileKey(file)];
+                    return gps ? [{ id: fileKey(file), label: file.name, position: gps }] : [];
+                  })
+                : []
+            }
+          />
         </div>
       </section>
 

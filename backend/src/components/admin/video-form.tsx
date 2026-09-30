@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { UploadCloud, X, Loader2, MapPin } from "lucide-react";
+import { UploadCloud, X, Loader2, MapPin, Route as RouteIcon } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { uploadFileWithProgress, CLIENT_UPLOAD_LIMITS } from "@/lib/upload";
 import { captureVideoThumbnailFile } from "@/lib/capture-video-thumbnail";
 import { AdminVideoThumbnail } from "@/components/admin/video-thumbnail";
 import { isGeneratedPlaceholderThumbnail } from "@/lib/thumbnail";
 import { METRO_MANILA_CITIES } from "@/lib/types";
-import type { Category, Video, VideoStatus } from "@/lib/types";
+import type { Category, Video, VideoRoute, VideoStatus } from "@/lib/types";
+import { RoutePicker } from "@/components/admin/map";
 
 interface VideoFormProps {
   mode: "create" | "edit";
@@ -52,8 +53,7 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
   const [city, setCity] = useState(initialVideo?.city ?? "");
   const [province, setProvince] = useState(initialVideo?.province ?? "Metro Manila");
   const [region, setRegion] = useState(initialVideo?.region ?? "NCR");
-  const [latitude, setLatitude] = useState(initialVideo?.latitude?.toString() ?? "");
-  const [longitude, setLongitude] = useState(initialVideo?.longitude?.toString() ?? "");
+  const [route, setRoute] = useState<VideoRoute | null>(initialVideo?.route ?? null);
   const [recordedDate, setRecordedDate] = useState(
     initialVideo?.recorded_at ? initialVideo.recorded_at.slice(0, 10) : ""
   );
@@ -212,8 +212,12 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
         province: province.trim() || null,
         region: region.trim() || null,
         location: [street, barangay, city].filter(Boolean).join(", ") || null,
-        latitude: latitude ? Number(latitude) : null,
-        longitude: longitude ? Number(longitude) : null,
+        // The start point doubles as the video's single location.
+        latitude: route ? route.points[0][0] : null,
+        longitude: route ? route.points[0][1] : null,
+        // Only sent when a route is (or was) set, so saving still works before
+        // migration 0005 adds the column.
+        ...(route || initialVideo?.route ? { route } : {}),
         recorded_at: recordedDate ? new Date(`${recordedDate}T00:00:00Z`).toISOString() : null,
         category_id: categoryId || null,
         tags,
@@ -506,29 +510,21 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Latitude</label>
-            <input
-              type="number"
-              step="any"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="14.5995"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Longitude</label>
-            <input
-              type="number"
-              step="any"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="120.9842"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
-            />
-          </div>
         </div>
+      </section>
+
+      {/* Route on the map */}
+      <section className="space-y-3 rounded-2xl border border-border bg-surface p-4">
+        <div>
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-muted">
+            <RouteIcon className="h-4 w-4" /> Route (start &amp; end coordinates)
+          </h2>
+          <p className="mt-1 text-xs text-muted">
+            Set where the walk starts and ends. The route is highlighted on the public map next to the video.
+            Leave empty if unknown — visitors will see that no location has been set.
+          </p>
+        </div>
+        <RoutePicker value={route} onChange={setRoute} />
       </section>
 
       {/* Categorization */}

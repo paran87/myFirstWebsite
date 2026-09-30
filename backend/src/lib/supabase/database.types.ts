@@ -72,6 +72,7 @@ export interface Database {
           region: string | null;
           latitude: number | null;
           longitude: number | null;
+          route: Json | null;
           recorded_at: string | null;
           uploaded_at: string;
           duration_seconds: number | null;
@@ -101,6 +102,7 @@ export interface Database {
           region?: string | null;
           latitude?: number | null;
           longitude?: number | null;
+          route?: Json | null;
           recorded_at?: string | null;
           uploaded_at?: string;
           duration_seconds?: number | null;

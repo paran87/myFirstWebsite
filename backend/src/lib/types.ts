@@ -56,6 +56,18 @@ export interface Photo {
   updated_at: string;
 }
 
+export type LatLng = [latitude: number, longitude: number];
+
+export type VideoRouteMode = "walking" | "driving" | "straight";
+
+/** Walked route: `points` are what the admin picked, `path` is the line drawn. */
+export interface VideoRoute {
+  mode: VideoRouteMode;
+  points: LatLng[];
+  path: LatLng[];
+  distance_m?: number | null;
+}
+
 export interface Video {
   id: string;
   title: string;
@@ -75,6 +87,8 @@ export interface Video {
 
   latitude: number | null;
   longitude: number | null;
+  /** Null until migration 0005 is applied and a route is set. */
+  route?: VideoRoute | null;
 
   recorded_at: string | null;
   uploaded_at: string;

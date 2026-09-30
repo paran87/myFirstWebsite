@@ -68,7 +68,7 @@ export function Header({ categories }: { categories: Category[] }) {
           : "border-transparent bg-transparent"
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 lg:px-6">
+      <div className="mx-auto flex h-16 max-w-[1920px] items-center gap-4 px-4 lg:px-6 2xl:px-8">
         <button
           onClick={() => setMobileOpen((v) => !v)}
           className="rounded-lg p-2 text-muted transition hover:bg-surface-2 hover:text-foreground lg:hidden"

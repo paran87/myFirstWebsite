@@ -6,7 +6,7 @@ import { getCategories, getVideo, getVideos } from "@/lib/api";
 import { VideoPlayer } from "@/components/video/video-player";
 import { RelatedVideos } from "@/components/video/related-videos";
 import { FiltersBar } from "@/components/video/filters-bar";
-import { MapViewLoader } from "@/components/video/map-view-loader";
+import { VideoLocationPanel } from "@/components/map/video-location-panel";
 import { formatDate, formatDuration, formatViews } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
 import type { VideoListParams } from "@/lib/api";
@@ -73,12 +73,6 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/vi
     .filter(Boolean)
     .join(", ");
 
-  const hasCoordinates =
-    typeof video.latitude === "number" &&
-    typeof video.longitude === "number" &&
-    !Number.isNaN(video.latitude) &&
-    !Number.isNaN(video.longitude);
-
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
@@ -91,7 +85,7 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/vi
   };
 
   return (
-    <main className="animate-fade-in mx-auto max-w-7xl px-4 py-6 lg:px-6">
+    <main className="animate-fade-in mx-auto w-full max-w-[1920px] px-4 py-6 lg:px-6 2xl:px-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <Link
@@ -102,12 +96,16 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/vi
         Back to catalog
       </Link>
 
-      <div className="sticky top-16 z-20 mb-4">
+      <div className="z-20 mb-4 lg:sticky lg:top-16">
         <FiltersBar categories={categories} />
       </div>
 
-      <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(26rem,1fr)]">
-        <div className="flex min-h-0 flex-col gap-3">
+      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(17rem,0.85fr)_minmax(0,2.2fr)_minmax(19rem,1fr)] 2xl:gap-6">
+        <div className="order-2 min-w-0 xl:order-none">
+          <VideoLocationPanel video={video} />
+        </div>
+
+        <div className="order-1 flex min-h-0 min-w-0 flex-col gap-3 xl:order-none">
           <div className="overflow-hidden rounded-2xl shadow-xl shadow-black/20">
             <VideoPlayer videoId={video.id} videoUrl={video.video_url} thumbnailUrl={video.thumbnail_url} title={video.title} />
           </div>
@@ -181,26 +179,12 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/vi
                 </div>
               )}
 
-              {hasCoordinates && (
-                <div className="rounded-lg border border-border bg-surface px-2.5 py-2 sm:col-span-2">
-                  <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-foreground/70">
-                    <MapPin className="h-3 w-3 text-primary" />
-                    Recording Location
-                  </p>
-                  <MapViewLoader
-                    latitude={video.latitude as number}
-                    longitude={video.longitude as number}
-                    label={video.title}
-                  />
-                  <p className="mt-1 text-[10px] text-muted">
-                    {video.latitude?.toFixed(5)}, {video.longitude?.toFixed(5)}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
-        <RelatedVideos current={video} videos={catalog?.data ?? []} />
+        <div className="order-3 min-w-0 xl:order-none">
+          <RelatedVideos current={video} videos={catalog?.data ?? []} />
+        </div>
       </div>
     </main>
   );

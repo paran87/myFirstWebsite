@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { FiltersBar } from "@/components/video/filters-bar";
 import { PhotoCatalogContext } from "@/components/photo/photo-catalog-context";
 import { RelatedPhotos } from "@/components/photo/related-photos";
+import { PhotoMapPanel } from "@/components/map/photo-map-panel";
 import { getPhotos, type PhotoListParams } from "@/lib/api";
 import type { Category, Photo } from "@/lib/types";
 
@@ -65,7 +66,7 @@ export function PhotoWatchFrame({
 
   return (
     <PhotoCatalogContext.Provider value={value}>
-      <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+      <main className="mx-auto w-full max-w-[1920px] px-4 py-6 lg:px-6 2xl:px-8">
         <Link
           href="/photos"
           className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:text-primary"
@@ -74,13 +75,18 @@ export function PhotoWatchFrame({
           Back to photos
         </Link>
 
-        <div className="sticky top-16 z-20 mb-4">
+        <div className="z-20 mb-4 lg:sticky lg:top-16">
           <FiltersBar categories={categories} />
         </div>
 
-        <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(26rem,1fr)]">
-          {children}
-          <RelatedPhotos photos={photos} />
+        <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(17rem,0.85fr)_minmax(0,2.2fr)_minmax(19rem,1fr)] 2xl:gap-6">
+          <div className="order-2 min-w-0 xl:order-none">
+            <PhotoMapPanel />
+          </div>
+          <div className="order-1 min-w-0 xl:order-none">{children}</div>
+          <div className="order-3 min-w-0 xl:order-none">
+            <RelatedPhotos photos={photos} />
+          </div>
         </div>
       </main>
     </PhotoCatalogContext.Provider>

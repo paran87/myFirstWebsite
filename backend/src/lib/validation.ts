@@ -4,6 +4,16 @@ import { LIST_SORTS } from "@/lib/sort";
 
 export const videoStatusSchema = z.enum(["draft", "published", "private", "deleted"]);
 
+const latLngSchema = z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)]);
+
+/** Walked route drawn on the public map; see supabase/migrations/0005_video_route.sql. */
+export const videoRouteSchema = z.object({
+  mode: z.enum(["walking", "driving", "straight"]),
+  points: z.array(latLngSchema).min(2).max(50),
+  path: z.array(latLngSchema).min(2).max(20000),
+  distance_m: z.number().min(0).optional().nullable(),
+});
+
 export const createVideoSchema = z.object({
   title: z.string().trim().min(1, "Title is required.").max(200),
   description: z.string().trim().max(5000).optional().nullable(),
@@ -22,6 +32,7 @@ export const createVideoSchema = z.object({
 
   latitude: z.number().min(-90).max(90).optional().nullable(),
   longitude: z.number().min(-180).max(180).optional().nullable(),
+  route: videoRouteSchema.optional().nullable(),
 
   recorded_at: z.string().datetime({ offset: true }).optional().nullable(),
   duration_seconds: z.number().int().min(0).optional().nullable(),
