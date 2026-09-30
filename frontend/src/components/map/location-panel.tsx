@@ -1,5 +1,16 @@
 import type { ReactNode } from "react";
 import { MapPinOff } from "lucide-react";
+import type { ExploreMapProps } from "./explore-map";
+
+/** Everything the shared map panel shows for the selected video or photo. */
+export interface LocationPanelContent {
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+  map: ExploreMapProps;
+  empty?: { title: string; message: string } | null;
+  info?: ReactNode;
+}
 
 /**
  * Left-hand map column on the video/photo pages. Fills the viewport height
@@ -71,14 +82,4 @@ export function formatLatLng([lat, lng]: [number, number]) {
 export function formatDistance(meters: number | null | undefined) {
   if (!meters) return null;
   return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`;
-}
-
-/** Placeholder with the panel's footprint while the first item loads. */
-export function LocationPanelSkeleton() {
-  return (
-    <aside className="page-shell flex min-h-0 flex-col gap-3 p-3 sm:p-4 xl:sticky xl:top-20 xl:h-[calc(100vh-6rem)] xl:max-h-[calc(100vh-6rem)]">
-      <div className="skeleton explorer-hide-mobile h-9 w-40" />
-      <div className="skeleton explorer-map-box h-[26rem] w-full sm:h-[34rem] xl:h-auto xl:flex-1" />
-    </aside>
-  );
 }

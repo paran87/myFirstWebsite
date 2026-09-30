@@ -4,11 +4,19 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronDown, ChevronUp, Film, Home, ImageIcon, Menu, X } from "lucide-react";
 
-const SECTIONS = [
-  { href: "/", label: "Home", icon: Home, kind: null },
-  { href: "/#catalog", label: "Videos", icon: Film, kind: "Video" },
-  { href: "/photos", label: "Photos", icon: ImageIcon, kind: "Photo" },
-] as const;
+export type ListKind = "video" | "photo";
+
+const KINDS = {
+  video: { label: "Video", list: "Videos", icon: Film, backHref: "/", backLabel: "Back to catalog" },
+  photo: { label: "Photo", list: "Photos", icon: ImageIcon, backHref: "/photos", backLabel: "Back to photos" },
+} as const;
+
+const tabClass = (current: boolean) =>
+  `flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-bold transition ${
+    current
+      ? "bg-brand-gradient text-white shadow-md shadow-primary/25 dark:text-primary-foreground"
+      : "text-foreground/75 hover:bg-surface hover:text-primary"
+  }`;
 
 /**
  * Shared shell for the video and photo pages.
@@ -21,14 +29,16 @@ const SECTIONS = [
  * from the ☰ button, and the selected item's player/details sit in a bottom
  * sheet that collapses to a title bar. Picking an item closes the list and
  * opens the sheet while the map flies to it.
+ *
+ * The Videos/Photos tabs only swap the list in place; nothing navigates
+ * until an item in it is picked.
  */
 export function MapExplorer({
   activeId,
   activeTitle,
-  kindLabel,
-  backHref,
-  backLabel,
-  listTitle,
+  kind,
+  listKind,
+  onListKindChange,
   listCount,
   filters,
   map,
@@ -37,16 +47,17 @@ export function MapExplorer({
 }: {
   activeId: string;
   activeTitle: string | null;
-  kindLabel: string;
-  backHref: string;
-  backLabel: string;
-  listTitle: string;
+  kind: ListKind;
+  listKind: ListKind;
+  onListKindChange: (kind: ListKind) => void;
   listCount: number;
   filters: ReactNode;
   map: ReactNode;
   list: ReactNode;
   children: ReactNode;
 }) {
+  const { label: kindLabel, backHref, backLabel } = KINDS[kind];
+  const { label: listLabel, list: listTitle } = KINDS[listKind];
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(true);
 
@@ -98,33 +109,33 @@ export function MapExplorer({
         </section>
 
         <div className="explorer-drawer order-3 min-w-0 xl:order-none">
-          {/* Quick switch between sections (phones) */}
-          <div className="mb-3 flex items-center gap-2 lg:hidden">
+          {/* Quick switch: Home, or swap the list between videos and photos */}
+          <div className="mb-3 flex items-center gap-2">
             <nav aria-label="Sections" className="flex flex-1 gap-1 rounded-full border border-border bg-surface-2/70 p-1">
-              {SECTIONS.map(({ href, label, icon: Icon, kind }) => {
-                const current = kind === kindLabel;
+              <Link href="/" onClick={() => setDrawerOpen(false)} className={tabClass(false)}>
+                <Home className="h-4 w-4" />
+                Home
+              </Link>
+              {(Object.keys(KINDS) as ListKind[]).map((key) => {
+                const { list, icon: Icon } = KINDS[key];
                 return (
-                  <Link
-                    key={label}
-                    href={href}
-                    aria-current={current ? "page" : undefined}
-                    onClick={() => setDrawerOpen(false)}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-bold transition ${
-                      current
-                        ? "bg-brand-gradient text-white shadow-md shadow-primary/25 dark:text-primary-foreground"
-                        : "text-foreground/75 hover:bg-surface hover:text-primary"
-                    }`}
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={listKind === key}
+                    onClick={() => onListKindChange(key)}
+                    className={tabClass(listKind === key)}
                   >
                     <Icon className="h-4 w-4" />
-                    {label}
-                  </Link>
+                    {list}
+                  </button>
                 );
               })}
             </nav>
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
-              className="shrink-0 rounded-full p-2 text-foreground/70 hover:bg-surface-2"
+              className="shrink-0 rounded-full p-2 text-foreground/70 hover:bg-surface-2 lg:hidden"
               aria-label="Close list"
             >
               <X className="h-5 w-5" />
@@ -133,7 +144,7 @@ export function MapExplorer({
           <div className="mb-3 lg:hidden">
             <p className="font-display text-xl font-extrabold leading-tight">{listTitle}</p>
             <p className="text-xs font-medium text-foreground/65">
-              {listCount} {kindLabel.toLowerCase()}
+              {listCount} {listLabel.toLowerCase()}
               {listCount === 1 ? "" : "s"} · tap one to see it on the map
             </p>
           </div>

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MapContainer, Marker, Tooltip, useMap } from "react-leaflet";
+import { Marker, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng } from "@/lib/types";
-import { METRO_MANILA_CENTER, pinIcon } from "./pins";
-import { BaseLayers } from "./base-layers";
+import { pinIcon } from "./pins";
+import { takeFirstFrame } from "./fit-state";
 
 export interface PhotoPin {
   id: string;
@@ -16,22 +16,25 @@ export interface PhotoPin {
 /** Flies to the selected photo; with none selected, shows every pin. */
 function FollowActive({ active, pins }: { active: PhotoPin | null; pins: PhotoPin[] }) {
   const map = useMap();
-  const first = useRef(true);
   const activeKey = active ? `${active.id}:${active.position.join(",")}` : "";
+  const pinsKey = active ? "" : String(pins.length);
   useEffect(() => {
-    const animate = !first.current;
-    first.current = false;
+    if (!active && pins.length === 0) return;
+    const animate = !takeFirstFrame(map);
     if (active) {
       const zoom = Math.max(map.getZoom(), 15);
       if (animate) map.flyTo(active.position, zoom, { duration: 0.9 });
       else map.setView(active.position, zoom);
     } else if (pins.length > 1) {
-      map.fitBounds(L.latLngBounds(pins.map((p) => p.position)), { padding: [36, 36], maxZoom: 16 });
-    } else if (pins.length === 1) {
-      map.setView(pins[0].position, 15);
+      const bounds = L.latLngBounds(pins.map((p) => p.position));
+      if (animate) map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 16, duration: 0.8 });
+      else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 16 });
+    } else {
+      if (animate) map.flyTo(pins[0].position, 15, { duration: 0.8 });
+      else map.setView(pins[0].position, 15);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- follow the selection only
-  }, [map, activeKey]);
+  }, [map, activeKey, pinsKey]);
 
   // Keep the selected photo centred when the map area changes size (e.g.
   // the phone bottom sheet opening or closing).
@@ -51,22 +54,12 @@ function FollowActive({ active, pins }: { active: PhotoPin | null; pins: PhotoPi
   return null;
 }
 
-function AutoResize() {
-  const map = useMap();
-  useEffect(() => {
-    const observer = new ResizeObserver(() => map.invalidateSize());
-    observer.observe(map.getContainer());
-    return () => observer.disconnect();
-  }, [map]);
-  return null;
-}
-
 /**
  * Every geotagged photo in the current gallery as a pin; the photo being
  * viewed is highlighted and labelled, and the map follows it as you browse.
  * Clicking another pin opens that photo.
  */
-export function PhotoLocationsMap({
+export function PhotoPinLayers({
   pins,
   activeId,
   onSelect,
@@ -78,14 +71,7 @@ export function PhotoLocationsMap({
   const active = pins.find((pin) => pin.id === activeId) ?? null;
 
   return (
-    <MapContainer
-      center={active?.position ?? pins[0]?.position ?? METRO_MANILA_CENTER}
-      zoom={active ? 15 : pins.length ? 14 : 11}
-      scrollWheelZoom
-      style={{ height: "100%", width: "100%" }}
-    >
-      <BaseLayers />
-      <AutoResize />
+    <>
       <FollowActive active={active} pins={pins} />
 
       {pins
@@ -108,6 +94,6 @@ export function PhotoLocationsMap({
           </Tooltip>
         </Marker>
       )}
-    </MapContainer>
+    </>
   );
 }

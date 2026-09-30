@@ -1,24 +1,23 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MapContainer, Marker, Polyline, Tooltip, useMap } from "react-leaflet";
+import { Marker, Polyline, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng, VideoRoute } from "@/lib/types";
-import { METRO_MANILA_CENTER, ROUTE_COLORS, pinIcon } from "./pins";
-import { BaseLayers } from "./base-layers";
+import { ROUTE_COLORS, pinIcon } from "./pins";
+import { takeFirstFrame } from "./fit-state";
 
-/** Frames the route; after the first video it glides to the next one. */
+/** Frames the route: instantly the first time, gliding afterwards. */
 function FitTo({ positions }: { positions: LatLng[] }) {
   const map = useMap();
-  const first = useRef(true);
   const key = positions.map((p) => p.join(",")).join("|");
   useEffect(() => {
-    const animate = !first.current;
-    first.current = false;
+    if (positions.length === 0) return;
+    const animate = !takeFirstFrame(map);
     if (positions.length === 1) {
       if (animate) map.flyTo(positions[0], 16, { duration: 0.8 });
       else map.setView(positions[0], 16);
-    } else if (positions.length > 1) {
+    } else {
       const bounds = L.latLngBounds(positions);
       if (animate) map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 17, duration: 0.8 });
       else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 17 });
@@ -46,23 +45,12 @@ function FitTo({ positions }: { positions: LatLng[] }) {
   return null;
 }
 
-/** Keeps Leaflet's size in sync when the panel is resized (layout changes). */
-function AutoResize() {
-  const map = useMap();
-  useEffect(() => {
-    const observer = new ResizeObserver(() => map.invalidateSize());
-    observer.observe(map.getContainer());
-    return () => observer.disconnect();
-  }, [map]);
-  return null;
-}
-
 /**
- * The walked route for a video, highlighted along the streets/waterway, with
- * start/end pins. Falls back to a single pin (older videos with only a
- * latitude/longitude) or, with no location at all, a plain Metro Manila map.
+ * A video's walked route, highlighted along the streets/waterway, with
+ * start/end pins — or a single pin for older videos with only a
+ * latitude/longitude. Renders nothing when there is no location.
  */
-export function VideoRouteMap({
+export function VideoRouteLayers({
   route,
   point,
   title,
@@ -76,14 +64,7 @@ export function VideoRouteMap({
   const fit: LatLng[] = path.length >= 2 ? path : point ? [point] : [];
 
   return (
-    <MapContainer
-      center={fit[0] ?? METRO_MANILA_CENTER}
-      zoom={fit.length ? 15 : 11}
-      scrollWheelZoom
-      style={{ height: "100%", width: "100%" }}
-    >
-      <BaseLayers />
-      <AutoResize />
+    <>
       <FitTo positions={fit} />
 
       {route && path.length >= 2 && (
@@ -118,6 +99,6 @@ export function VideoRouteMap({
           </Tooltip>
         </Marker>
       )}
-    </MapContainer>
+    </>
   );
 }
