@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MapPin, Eye } from "lucide-react";
 import { OptimizedImage } from "@/components/ui/optimized-image";
-import { formatViews, formatDate } from "@/lib/format";
+import { formatShortDate, formatViewCount, formatViews } from "@/lib/format";
 import type { CatalogLayout } from "@/lib/catalog-layout";
 import type { Photo } from "@/lib/types";
 
@@ -64,22 +64,22 @@ export function PhotoCard({
           </span>
         )}
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col gap-1.5 ${isList ? "justify-center p-3 sm:p-4" : "p-2.5 sm:p-3.5"} ${compact ? "!p-2.5" : ""}`}>
-        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-9 text-xs sm:text-sm" : "min-h-10 text-sm sm:min-h-13 sm:text-[1.05rem]"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col gap-1 ${isList ? "justify-center p-3 sm:p-4" : "p-2.5 sm:p-3"} ${compact ? "!p-2" : ""}`}>
+        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-8 text-xs leading-tight sm:text-[13px]" : "min-h-10 text-sm sm:min-h-12 sm:text-base"}`}>
           {photo.title}
         </h3>
         {isList ? (
           locationLabel ? (
-            <p className={`flex items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-xs sm:text-sm"}`}>
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <p className={`flex items-center gap-1 font-medium text-foreground/80 ${compact ? "text-[10px] sm:text-[11px]" : "text-[11px] sm:text-[13px]"}`}>
+              <MapPin className="h-3 w-3 shrink-0 text-primary" />
               <span className="truncate">{locationLabel}</span>
             </p>
           ) : null
         ) : (
-          <p className={`flex min-h-5 items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-xs sm:text-sm"}`}>
+          <p className={`flex min-h-4 items-center gap-1 font-medium text-foreground/80 ${compact ? "text-[10px] sm:text-[11px]" : "text-[11px] sm:text-[13px]"}`}>
             {locationLabel ? (
               <>
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <MapPin className="h-3 w-3 shrink-0 text-primary" />
                 <span className="truncate">{locationLabel}</span>
               </>
             ) : (
@@ -87,11 +87,11 @@ export function PhotoCard({
             )}
           </p>
         )}
-        <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 font-medium text-foreground/75 ${compact ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm"} ${isList ? "pt-1" : "mt-auto border-t border-border/60 pt-2"}`}>
-          <span>{formatDate(photo.recorded_at)}</span>
-          <span className="flex items-center gap-1">
-            <Eye className="h-3 w-3" />
-            {formatViews(photo.views)}
+        <div className={`flex items-center justify-between font-medium leading-tight ${compact ? "gap-1" : "gap-2"} text-foreground/65 ${compact ? "text-[10px] sm:text-[11px]" : "text-[11px] sm:text-xs"} ${isList ? "pt-0.5" : "mt-auto border-t border-border/60 pt-1.5"}`}>
+          <span className="truncate">{formatShortDate(photo.recorded_at, compact)}</span>
+          <span className={`flex shrink-0 items-center whitespace-nowrap ${compact ? "gap-0.5" : "gap-1"}`} title={formatViews(photo.views)}>
+            <Eye className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
+            {formatViewCount(photo.views)}
           </span>
         </div>
       </div>
