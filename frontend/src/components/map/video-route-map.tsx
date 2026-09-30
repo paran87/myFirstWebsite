@@ -1,17 +1,27 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng, VideoRoute } from "@/lib/types";
 import { METRO_MANILA_CENTER, ROUTE_COLORS, TILE_ATTRIBUTION, TILE_URL, pinIcon } from "./pins";
 
+/** Frames the route; after the first video it glides to the next one. */
 function FitTo({ positions }: { positions: LatLng[] }) {
   const map = useMap();
+  const first = useRef(true);
   const key = positions.map((p) => p.join(",")).join("|");
   useEffect(() => {
-    if (positions.length === 1) map.setView(positions[0], 16);
-    else if (positions.length > 1) map.fitBounds(L.latLngBounds(positions), { padding: [36, 36], maxZoom: 17 });
+    const animate = !first.current;
+    first.current = false;
+    if (positions.length === 1) {
+      if (animate) map.flyTo(positions[0], 16, { duration: 0.8 });
+      else map.setView(positions[0], 16);
+    } else if (positions.length > 1) {
+      const bounds = L.latLngBounds(positions);
+      if (animate) map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 17, duration: 0.8 });
+      else map.fitBounds(bounds, { padding: [36, 36], maxZoom: 17 });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refit only when the positions change
   }, [map, key]);
   return null;

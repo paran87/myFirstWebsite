@@ -74,7 +74,7 @@ export function VideoPlayer({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-black">
+    <div className="overflow-hidden rounded-xl border border-border bg-black">
       <video
         ref={videoRef}
         src={videoUrl}

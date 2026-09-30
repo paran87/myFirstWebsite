@@ -37,7 +37,7 @@ export function PhotoCard({
       aria-current={active ? "page" : undefined}
       data-reveal={animate || undefined}
       style={animate ? { ["--reveal-delay" as string]: `${(index % 3) * 90}ms` } : undefined}
-      className={`card-hover group overflow-hidden rounded-[1.35rem] border bg-surface/90 shadow-sm shadow-black/5 backdrop-blur-md ${
+      className={`card-hover group overflow-hidden rounded-xl border bg-surface/90 shadow-sm shadow-black/5 backdrop-blur-md ${
         active ? "border-primary ring-2 ring-primary/40" : "border-border/80"
       } ${isList ? "flex flex-row items-stretch" : "flex flex-col"}`}
     >

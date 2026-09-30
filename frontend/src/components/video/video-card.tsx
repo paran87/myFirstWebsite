@@ -26,7 +26,7 @@ export function VideoCard({
       href={query ? `/video/${video.id}?${query}` : `/video/${video.id}`}
       data-reveal
       style={{ ["--reveal-delay" as string]: `${(index % 3) * 90}ms` }}
-      className={`card-hover group overflow-hidden rounded-[1.35rem] border border-border/80 bg-surface/90 shadow-sm shadow-black/5 backdrop-blur-md ${
+      className={`card-hover group overflow-hidden rounded-xl border border-border/80 bg-surface/90 shadow-sm shadow-black/5 backdrop-blur-md ${
         isList ? "flex flex-row items-stretch" : "flex h-full flex-col"
       }`}
     >

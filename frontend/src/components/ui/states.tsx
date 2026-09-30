@@ -9,7 +9,7 @@ export function EmptyState({
   description?: string;
 }) {
   return (
-    <div className="animate-fade-up col-span-full flex flex-col items-center justify-center gap-2 rounded-[1.75rem] border border-dashed border-border bg-surface/50 px-6 py-16 text-center">
+    <div className="animate-fade-up col-span-full flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface/50 px-6 py-16 text-center">
       <LostMap className="h-40 w-auto text-foreground" />
       <p className="mt-2 font-display text-2xl font-extrabold tracking-tight">{title}</p>
       <p className="max-w-sm text-base font-medium text-foreground/70">{description}</p>
@@ -25,7 +25,7 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-[1.75rem] border border-dashed border-danger/30 bg-danger/5 py-20 text-center">
+    <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-danger/30 bg-danger/5 py-20 text-center">
       <span className="animate-wiggle flex h-16 w-16 items-center justify-center rounded-2xl bg-danger/10">
         <AlertTriangle className="h-8 w-8 text-danger" />
       </span>
@@ -45,7 +45,7 @@ export function ErrorState({
 
 export function VideoCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[1.35rem] border border-border bg-surface/80">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface/80">
       <div className="skeleton aspect-video w-full rounded-none" />
       <div className="space-y-2 p-3">
         <div className="skeleton h-4 w-4/5 rounded" />

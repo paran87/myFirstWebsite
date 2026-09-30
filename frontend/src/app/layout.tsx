@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Plus_Jakarta_Sans, Bricolage_Grotesque, IBM_Plex_Mono } from "next/font/google";
+import { Barlow, Barlow_Condensed, IBM_Plex_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -10,16 +10,19 @@ import { siteConfig } from "@/lib/config";
 import { getCategories } from "@/lib/api";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+// Barlow for text, Barlow Condensed for headings and numbers — a clean,
+// slightly technical look that fits maps and data.
+const barlow = Barlow({
+  variable: "--font-barlow",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-barlow-condensed",
   subsets: ["latin"],
-  axes: ["opsz", "wdth"],
+  weight: ["500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -58,7 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${plusJakarta.variable} ${bricolage.variable} ${plexMono.variable} ${plusJakarta.className} h-full antialiased`}
+      className={`${barlow.variable} ${barlowCondensed.variable} ${plexMono.variable} ${barlow.className} h-full antialiased`}
     >
       <head>
         {/* Marks JS as available before first paint so scroll-reveal can hide

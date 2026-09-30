@@ -111,8 +111,8 @@ function HeroVisual() {
         style={{ ["--reveal-delay" as string]: "200ms" }}
         className="absolute right-0 top-0 w-[74%]"
       >
-        <div className="animate-float rotate-3 overflow-hidden rounded-[1.75rem] border border-border/80 bg-surface p-2 shadow-2xl shadow-primary/15" style={{ animationDuration: "8s" }}>
-          <div className="aspect-[4/3] overflow-hidden rounded-[1.35rem]">
+        <div className="animate-float rotate-3 overflow-hidden rounded-2xl border border-border/80 bg-surface p-2 shadow-2xl shadow-primary/15" style={{ animationDuration: "8s" }}>
+          <div className="aspect-[4/3] overflow-hidden rounded-xl">
             <RouteMap />
           </div>
           <div className="flex items-center justify-between px-2 pb-1 pt-2.5 text-xs font-bold">
@@ -131,8 +131,8 @@ function HeroVisual() {
         style={{ ["--reveal-delay" as string]: "380ms" }}
         className="absolute bottom-0 left-0 w-[70%]"
       >
-        <div className="animate-float -rotate-3 overflow-hidden rounded-[1.75rem] border border-white/40 bg-surface p-2 shadow-2xl shadow-black/25" style={{ animationDelay: "-3s", animationDuration: "9s" }}>
-          <div className="relative aspect-video overflow-hidden rounded-[1.35rem]">
+        <div className="animate-float -rotate-3 overflow-hidden rounded-2xl border border-white/40 bg-surface p-2 shadow-2xl shadow-black/25" style={{ animationDelay: "-3s", animationDuration: "9s" }}>
+          <div className="relative aspect-video overflow-hidden rounded-xl">
             <Image
               src="/images/hero-metro-manila.png"
               alt="Makati skyline at golden hour"
@@ -220,7 +220,7 @@ export function Hero({
 
           <h1
             className="animate-fade-up mt-6 text-[2.75rem] font-extrabold leading-[1.02] tracking-tight text-foreground sm:text-6xl xl:text-7xl"
-            style={{ animationDelay: "90ms", fontStretch: "92%" }}
+            style={{ animationDelay: "90ms" }}
           >
             Explore the streets of{" "}
             <span className="relative inline-block whitespace-nowrap">
@@ -276,7 +276,7 @@ export function Hero({
                 key={label}
                 data-reveal
                 style={{ ["--reveal-delay" as string]: `${300 + i * 110}ms` }}
-                className="rounded-2xl border border-border/80 bg-surface/75 p-3.5 shadow-sm backdrop-blur-md sm:p-4"
+                className="rounded-xl border border-border/80 bg-surface/75 p-3.5 shadow-sm backdrop-blur-md sm:p-4"
               >
                 <Icon className="h-5 w-5 text-primary" />
                 <p className="mt-2 font-display text-2xl font-extrabold leading-none sm:text-3xl">

@@ -19,11 +19,11 @@ function score(current: Video, video: Video): number {
   return points;
 }
 
-export function RelatedVideos({ current, videos }: { current: Video; videos: Video[] }) {
+export function RelatedVideos({ current, videos }: { current: Video | null; videos: Video[] }) {
   const [layout, setLayout] = useCatalogLayout();
   const searchParams = useSearchParams();
   const query = searchParams.toString();
-  const related = rankRelated(current, videos);
+  const related = current ? rankRelated(current, videos) : videos;
   const hasFilters = Boolean(
     searchParams.get("city") ||
       searchParams.get("category") ||

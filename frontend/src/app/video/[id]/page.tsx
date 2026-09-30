@@ -1,15 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { MapPin, Calendar, Clock, Eye, Tag as TagIcon, UploadCloud, ArrowLeft } from "lucide-react";
-import { getCategories, getVideo, getVideos } from "@/lib/api";
+import { MapPin, Calendar, Clock, Eye, Tag as TagIcon, UploadCloud } from "lucide-react";
+import { getVideo } from "@/lib/api";
 import { VideoPlayer } from "@/components/video/video-player";
-import { RelatedVideos } from "@/components/video/related-videos";
-import { FiltersBar } from "@/components/video/filters-bar";
-import { VideoLocationPanel } from "@/components/map/video-location-panel";
+import { RegisterActiveVideo } from "@/components/video/video-catalog-context";
 import { formatDate, formatDuration, formatViews } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
-import type { VideoListParams } from "@/lib/api";
 
 async function loadVideo(id: string) {
   try {
@@ -47,27 +43,11 @@ export async function generateMetadata({ params }: PageProps<"/video/[id]">): Pr
   };
 }
 
-export default async function VideoPage({ params, searchParams }: PageProps<"/video/[id]">) {
+export default async function VideoPage({ params }: PageProps<"/video/[id]">) {
   const { id } = await params;
-  const sp = await searchParams;
   const video = await loadVideo(id);
 
   if (!video) notFound();
-
-  const listParams: VideoListParams = {
-    page: 1,
-    limit: 24,
-    search: typeof sp.search === "string" ? sp.search : undefined,
-    city: typeof sp.city === "string" ? sp.city : undefined,
-    category: typeof sp.category === "string" ? sp.category : undefined,
-    year: typeof sp.year === "string" ? Number(sp.year) : undefined,
-    sort: (typeof sp.sort === "string" ? sp.sort : "newest") as VideoListParams["sort"],
-  };
-
-  const [catalog, categories] = await Promise.all([
-    getVideos(listParams).catch(() => null),
-    getCategories().catch(() => []),
-  ]);
 
   const locationLine = [video.street, video.barangay, video.city, video.province]
     .filter(Boolean)
@@ -85,28 +65,11 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/vi
   };
 
   return (
-    <main className="animate-fade-in mx-auto w-full max-w-[1920px] px-4 py-6 lg:px-6 2xl:px-8">
+    <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <RegisterActiveVideo video={video} />
 
-      <Link
-        href="/"
-        className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1.5 text-base font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to catalog
-      </Link>
-
-      <div className="z-20 mb-4 lg:sticky lg:top-16">
-        <FiltersBar categories={categories} />
-      </div>
-
-      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(17rem,0.75fr)] 2xl:gap-6">
-        <div className="order-2 min-w-0 xl:order-none">
-          <VideoLocationPanel video={video} />
-        </div>
-
-        <div className="order-1 flex min-h-0 min-w-0 flex-col gap-3 xl:order-none">
-          <div className="overflow-hidden rounded-2xl shadow-xl shadow-black/20">
+          <div className="overflow-hidden rounded-xl shadow-xl shadow-black/20">
             <VideoPlayer videoId={video.id} videoUrl={video.video_url} thumbnailUrl={video.thumbnail_url} title={video.title} />
           </div>
 
@@ -181,11 +144,6 @@ export default async function VideoPage({ params, searchParams }: PageProps<"/vi
 
             </div>
           </div>
-        </div>
-        <div className="order-3 min-w-0 xl:order-none">
-          <RelatedVideos current={video} videos={catalog?.data ?? []} />
-        </div>
-      </div>
-    </main>
+    </>
   );
 }

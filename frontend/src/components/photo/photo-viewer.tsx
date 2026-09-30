@@ -184,7 +184,7 @@ export function PhotoViewer({
       )}
       {next && <PhotoImage src={next.image_url} alt="" sizes={PREVIEW_SIZES} quality={75} className="hidden" hidden />}
 
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-black/5 shadow-xl shadow-black/10">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-black/5 shadow-xl shadow-black/10">
         <button
           type="button"
           onClick={() => setFullscreen(true)}

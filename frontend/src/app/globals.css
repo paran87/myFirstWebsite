@@ -97,8 +97,8 @@
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-success: var(--success);
-  --font-sans: var(--font-jakarta);
-  --font-display: var(--font-bricolage);
+  --font-sans: var(--font-barlow);
+  --font-display: var(--font-barlow-condensed);
   --font-mono: var(--font-plex-mono);
 }
 
@@ -155,8 +155,7 @@ h2,
 h3,
 .font-display {
   font-family: var(--font-display), var(--font-sans), sans-serif;
-  font-optical-sizing: auto;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.005em;
   text-wrap: balance;
 }
 
@@ -610,7 +609,7 @@ p {
   background: color-mix(in srgb, var(--color-surface) 80%, transparent);
   backdrop-filter: blur(16px) saturate(140%);
   border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
-  border-radius: 1.75rem;
+  border-radius: 0.875rem;
   box-shadow:
     0 1px 0 0 color-mix(in srgb, #fff 60%, transparent) inset,
     0 30px 80px -50px rgba(120, 45, 20, 0.45);
@@ -732,7 +731,7 @@ p {
 }
 
 .leaflet-container {
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   z-index: 0;
   font-family: var(--font-sans), sans-serif;
   background: var(--color-surface-2);

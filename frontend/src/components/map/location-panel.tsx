@@ -31,7 +31,7 @@ export function LocationPanel({
         </div>
       </div>
 
-      <div className="relative h-[26rem] min-h-[18rem] overflow-hidden rounded-xl border border-border sm:h-[34rem] xl:h-auto xl:flex-1">
+      <div className="relative h-[26rem] min-h-[18rem] overflow-hidden rounded-lg border border-border sm:h-[34rem] xl:h-auto xl:flex-1">
         {map}
         {empty && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-surface/70 p-5 backdrop-blur-[2px]">
@@ -71,4 +71,14 @@ export function formatLatLng([lat, lng]: [number, number]) {
 export function formatDistance(meters: number | null | undefined) {
   if (!meters) return null;
   return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`;
+}
+
+/** Placeholder with the panel's footprint while the first item loads. */
+export function LocationPanelSkeleton() {
+  return (
+    <aside className="page-shell flex min-h-0 flex-col gap-3 p-3 sm:p-4 xl:sticky xl:top-20 xl:h-[calc(100vh-6rem)] xl:max-h-[calc(100vh-6rem)]">
+      <div className="skeleton h-9 w-40" />
+      <div className="skeleton h-[26rem] w-full sm:h-[34rem] xl:h-auto xl:flex-1" />
+    </aside>
+  );
 }

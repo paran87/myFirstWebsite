@@ -56,7 +56,7 @@ export function FiltersBar({ categories }: { categories: Category[] }) {
   }
 
   return (
-    <div className="glass grid grid-cols-2 items-center gap-2 rounded-[1.4rem] border border-border/80 p-2 shadow-sm sm:flex sm:flex-wrap">
+    <div className="glass grid grid-cols-2 items-center gap-2 rounded-xl border border-border/80 p-2 shadow-sm sm:flex sm:flex-wrap">
       <form onSubmit={handleSearchSubmit} className="relative col-span-2 min-w-0 sm:max-w-xs sm:flex-1">
         <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
         <input
