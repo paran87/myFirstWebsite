@@ -5,7 +5,7 @@ import { Film } from "lucide-react";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { resolveVideoPosterUrl } from "@/lib/thumbnail";
 
-const GRID_SIZES = "(min-width: 1280px) 400px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw";
+const GRID_SIZES = "(min-width: 1280px) 620px, 50vw";
 
 /**
  * Fallback still for videos without a thumbnail: grabs an early frame from

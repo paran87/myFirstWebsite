@@ -51,32 +51,32 @@ export function PhotoCard({
         <OptimizedImage
           src={photo.image_url}
           alt={photo.title}
-          sizes={isList ? "(min-width: 640px) 192px, 128px" : compact ? "(min-width: 640px) 200px, 50vw" : "(min-width: 1280px) 400px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
+          sizes={isList ? "(min-width: 640px) 192px, 128px" : compact ? "(min-width: 1280px) 200px, 50vw" : "(min-width: 1280px) 620px, 50vw"}
           quality={60}
           eager={index < 3 && !compact}
           className="object-cover transition duration-700 ease-[var(--ease-out)] group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-        {photo.category?.name && (
+        {photo.category?.name && !compact && (
           <span className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             {photo.category.name}
           </span>
         )}
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col gap-1.5 ${isList ? "justify-center p-3 sm:p-4" : "p-3.5"} ${compact ? "!p-2.5" : ""}`}>
-        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-9 text-sm" : "min-h-13 text-[1.05rem]"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col gap-1.5 ${isList ? "justify-center p-3 sm:p-4" : "p-2.5 sm:p-3.5"} ${compact ? "!p-2.5" : ""}`}>
+        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-9 text-xs sm:text-sm" : "min-h-10 text-sm sm:min-h-13 sm:text-[1.05rem]"}`}>
           {photo.title}
         </h3>
         {isList ? (
           locationLabel ? (
-            <p className={`flex items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-sm"}`}>
+            <p className={`flex items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-xs sm:text-sm"}`}>
               <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
               <span className="truncate">{locationLabel}</span>
             </p>
           ) : null
         ) : (
-          <p className={`flex min-h-5 items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-sm"}`}>
+          <p className={`flex min-h-5 items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-xs sm:text-sm"}`}>
             {locationLabel ? (
               <>
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -87,7 +87,7 @@ export function PhotoCard({
             )}
           </p>
         )}
-        <div className={`flex items-center justify-between text-sm font-medium text-foreground/75 ${isList ? "pt-1" : "mt-auto border-t border-border/60 pt-2"}`}>
+        <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 font-medium text-foreground/75 ${compact ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm"} ${isList ? "pt-1" : "mt-auto border-t border-border/60 pt-2"}`}>
           <span>{formatDate(photo.recorded_at)}</span>
           <span className="flex items-center gap-1">
             <Eye className="h-3 w-3" />

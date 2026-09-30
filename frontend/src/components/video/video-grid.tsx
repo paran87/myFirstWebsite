@@ -64,7 +64,7 @@ export function VideoGrid({ initialResult, params }: VideoGridProps) {
 
   if (videos.length === 0) {
     return (
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5">
         <EmptyState />
       </div>
     );
@@ -79,7 +79,7 @@ export function VideoGrid({ initialResult, params }: VideoGridProps) {
         className={
           layout === "list"
             ? "flex flex-col gap-3"
-            : "grid auto-rows-fr grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            : "grid auto-rows-fr grid-cols-2 items-stretch gap-3 sm:gap-5"
         }
       >
         {videos.map((video, i) => (

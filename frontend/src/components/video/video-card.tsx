@@ -50,7 +50,7 @@ export function VideoCard({
                 ? "(min-width: 640px) 144px, 112px"
                 : "(min-width: 640px) 224px, 144px"
               : compact
-                ? "(min-width: 640px) 200px, 50vw"
+                ? "(min-width: 1280px) 200px, 50vw"
                 : undefined
           }
         />
@@ -66,11 +66,11 @@ export function VideoCard({
           </span>
         </div>
 
-        <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 font-mono text-xs font-semibold text-white backdrop-blur-md">
+        <span className={`absolute flex items-center gap-1 rounded-full bg-black/65 font-mono font-semibold text-white backdrop-blur-md ${compact ? "bottom-1.5 right-1.5 px-1.5 py-0.5 text-[10px]" : "bottom-2 right-2 px-2 py-0.5 text-xs"}`}>
           <Clock className="h-3 w-3" />
           {formatDuration(video.duration_seconds)}
         </span>
-        {video.category?.name && (
+        {video.category?.name && !compact && (
           <span className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             {video.category.name}
@@ -78,19 +78,19 @@ export function VideoCard({
         )}
       </div>
 
-      <div className={`flex min-w-0 flex-1 flex-col gap-1.5 ${isList ? "justify-center p-3 sm:p-4" : "p-3.5"} ${compact ? "!p-2.5" : ""}`}>
-        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-9 text-sm" : "min-h-13 text-[1.05rem]"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col gap-1.5 ${isList ? "justify-center p-3 sm:p-4" : "p-2.5 sm:p-3.5"} ${compact ? "!p-2.5" : ""}`}>
+        <h3 className={`line-clamp-2 font-bold leading-snug tracking-tight transition-colors group-hover:text-primary ${compact ? "min-h-9 text-xs sm:text-sm" : "min-h-10 text-sm sm:min-h-13 sm:text-[1.05rem]"}`}>
           {video.title}
         </h3>
         {isList ? (
           locationLabel ? (
-            <p className={`flex items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-sm"}`}>
+            <p className={`flex items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-xs sm:text-sm"}`}>
               <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
               <span className="truncate">{locationLabel}</span>
             </p>
           ) : null
         ) : (
-          <p className={`flex min-h-5 items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-sm"}`}>
+          <p className={`flex min-h-5 items-center gap-1 font-medium text-foreground/80 ${compact ? "text-xs" : "text-xs sm:text-sm"}`}>
             {locationLabel ? (
               <>
                 <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
@@ -106,7 +106,7 @@ export function VideoCard({
             {video.description}
           </p>
         )}
-        <div className={`flex items-center justify-between text-sm font-medium text-foreground/75 ${isList ? "pt-1" : "mt-auto border-t border-border/60 pt-2"}`}>
+        <div className={`flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 font-medium text-foreground/75 ${compact ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm"} ${isList ? "pt-1" : "mt-auto border-t border-border/60 pt-2"}`}>
           <span>{formatDate(video.recorded_at)}</span>
           <span className="flex items-center gap-1">
             <Eye className="h-3 w-3" />

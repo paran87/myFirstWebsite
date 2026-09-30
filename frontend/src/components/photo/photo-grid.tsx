@@ -67,7 +67,7 @@ export function PhotoGrid({
         className={
           layout === "list"
             ? "flex flex-col gap-3"
-            : "grid grid-cols-1 content-start items-start gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            : "grid grid-cols-2 content-start items-start gap-3 sm:gap-5"
         }
       >
         {photos.map((photo, index) => (

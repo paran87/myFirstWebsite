@@ -114,8 +114,8 @@ export function VideoPlayer({
             className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-border hover:text-foreground sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs"
           >
             <PictureInPicture2 className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="sm:hidden">PiP</span>
-            <span className="hidden sm:inline">Picture-in-Picture</span>
+            <span className="2xl:hidden">PiP</span>
+            <span className="hidden 2xl:inline">Picture-in-Picture</span>
           </button>
         )}
       </div>

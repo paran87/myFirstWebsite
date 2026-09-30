@@ -9,7 +9,7 @@ export default function Loading() {
         <div className="skeleton h-4 w-40 rounded-lg" />
       </div>
       <div className="skeleton mb-6 h-14 w-full rounded-2xl" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5">
         {Array.from({ length: 8 }).map((_, i) => (
           <VideoCardSkeleton key={i} />
         ))}

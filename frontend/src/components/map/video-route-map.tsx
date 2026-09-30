@@ -50,7 +50,7 @@ export function VideoRouteMap({
     <MapContainer
       center={fit[0] ?? METRO_MANILA_CENTER}
       zoom={fit.length ? 15 : 11}
-      scrollWheelZoom={false}
+      scrollWheelZoom
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />

@@ -64,7 +64,7 @@ export function PhotoLocationsMap({
     <MapContainer
       center={active?.position ?? pins[0]?.position ?? METRO_MANILA_CENTER}
       zoom={active ? 15 : pins.length ? 14 : 11}
-      scrollWheelZoom={false}
+      scrollWheelZoom
       style={{ height: "100%", width: "100%" }}
     >
       <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />

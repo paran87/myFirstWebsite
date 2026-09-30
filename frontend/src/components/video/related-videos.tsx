@@ -50,7 +50,7 @@ export function RelatedVideos({ current, videos }: { current: Video; videos: Vid
           className={
             layout === "list"
               ? "flex min-h-0 flex-col gap-2 overflow-y-auto pr-1"
-              : "grid min-h-0 auto-rows-max grid-cols-1 items-stretch gap-3 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-1 min-[2200px]:grid-cols-2"
+              : "grid min-h-0 auto-rows-max grid-cols-2 items-stretch gap-2.5 overflow-y-auto pr-1 sm:gap-3"
           }
         >
           {related.map((video, index) => (
