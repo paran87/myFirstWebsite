@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Eye, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Search, Play } from "lucide-react";
 import { AdminVideoThumbnail } from "@/components/admin/video-thumbnail";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
@@ -12,6 +12,7 @@ import { useCatalogLayout } from "@/lib/catalog-layout";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SortSelect } from "@/components/admin/sort-select";
+import { MediaPreview, type PreviewItem } from "@/components/admin/media-preview";
 import { formatBytes } from "@/lib/format";
 import type { ListSort } from "@/lib/sort";
 import type { PaginatedResult, Video, VideoStatus } from "@/lib/types";
@@ -34,6 +35,28 @@ export default function AdminVideosPage() {
   const [toDelete, setToDelete] = useState<Video | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [layout, setLayout] = useCatalogLayout();
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+
+  const previewItems = useMemo<PreviewItem[]>(
+    () =>
+      (result?.data ?? []).map((video) => ({
+        id: video.id,
+        kind: "video",
+        title: video.title,
+        src: video.video_url,
+        poster: video.thumbnail_url,
+        status: video.status,
+        details: [
+          video.city || video.location,
+          video.recorded_at ? new Date(video.recorded_at).toLocaleDateString() : null,
+          video.file_size_bytes ? formatBytes(video.file_size_bytes) : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        editHref: `/admin/videos/${video.id}/edit`,
+      })),
+    [result]
+  );
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams({ page: String(page), limit: "20" });
@@ -136,14 +159,26 @@ export default function AdminVideosPage() {
       {!loading && !error && result && result.data.length > 0 && layout === "grid" && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {result.data.map((video) => (
+            {result.data.map((video, i) => (
               <article key={video.id} className="overflow-hidden rounded-2xl border border-border bg-surface">
-                <AdminVideoThumbnail
-                  title={video.title}
-                  thumbnailUrl={video.thumbnail_url}
-                  videoUrl={video.video_url}
-                  className="relative aspect-video w-full overflow-hidden bg-border"
-                />
+                <button
+                  type="button"
+                  onClick={() => setPreviewIndex(i)}
+                  className="group relative block w-full"
+                  aria-label={`Play ${video.title}`}
+                >
+                  <AdminVideoThumbnail
+                    title={video.title}
+                    thumbnailUrl={video.thumbnail_url}
+                    videoUrl={video.video_url}
+                    className="relative aspect-video w-full overflow-hidden bg-border"
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/30">
+                    <span className="flex h-12 w-12 scale-90 items-center justify-center rounded-full bg-white/90 text-black opacity-0 shadow-lg transition group-hover:scale-100 group-hover:opacity-100">
+                      <Play className="h-5 w-5 translate-x-0.5 fill-current" />
+                    </span>
+                  </span>
+                </button>
                 <div className="space-y-3 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <h2 className="line-clamp-2 font-semibold">{video.title}</h2>
@@ -163,15 +198,14 @@ export default function AdminVideosPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Link>
-                    <a
-                      href={video.video_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="View"
+                    <button
+                      type="button"
+                      onClick={() => setPreviewIndex(i)}
+                      title="Play"
                       className="rounded-md p-2 text-muted hover:bg-border hover:text-primary"
                     >
                       <Eye className="h-4 w-4" />
-                    </a>
+                    </button>
                     <button
                       onClick={() => setToDelete(video)}
                       title="Delete"
@@ -224,14 +258,24 @@ export default function AdminVideosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {result.data.map((video) => (
+                {result.data.map((video, i) => (
                   <tr key={video.id} className="hover:bg-background/50">
                     <td className="px-4 py-3">
-                      <AdminVideoThumbnail
-                        title={video.title}
-                        thumbnailUrl={video.thumbnail_url}
-                        videoUrl={video.video_url}
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewIndex(i)}
+                        className="group relative block rounded-lg"
+                        aria-label={`Play ${video.title}`}
+                      >
+                        <AdminVideoThumbnail
+                          title={video.title}
+                          thumbnailUrl={video.thumbnail_url}
+                          videoUrl={video.video_url}
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 text-white opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                          <Play className="h-4 w-4 fill-current" />
+                        </span>
+                      </button>
                     </td>
                     <td className="max-w-[220px] truncate px-4 py-3 font-medium">{video.title}</td>
                     <td className="px-4 py-3 text-muted">{video.city || video.location || "—"}</td>
@@ -253,15 +297,14 @@ export default function AdminVideosPage() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Link>
-                        <a
-                          href={video.video_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="View"
-                          className="rounded-md p-2 text-muted hover:bg-border hover:text-primary"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </a>
+                        <button
+                      type="button"
+                      onClick={() => setPreviewIndex(i)}
+                      title="Play"
+                      className="rounded-md p-2 text-muted hover:bg-border hover:text-primary"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
                         <button
                           onClick={() => setToDelete(video)}
                           title="Delete"
@@ -300,6 +343,13 @@ export default function AdminVideosPage() {
           </div>
         </div>
       )}
+
+      <MediaPreview
+        items={previewItems}
+        index={previewIndex !== null && previewIndex < previewItems.length ? previewIndex : null}
+        onIndexChange={setPreviewIndex}
+        onClose={() => setPreviewIndex(null)}
+      />
 
       <ConfirmDialog
         open={!!toDelete}

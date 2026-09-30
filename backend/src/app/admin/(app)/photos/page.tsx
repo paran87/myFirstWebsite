@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Eye, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, Search, ZoomIn } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-client";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -11,6 +11,7 @@ import { useCatalogLayout } from "@/lib/catalog-layout";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SortSelect } from "@/components/admin/sort-select";
+import { MediaPreview, type PreviewItem } from "@/components/admin/media-preview";
 import { formatBytes } from "@/lib/format";
 import type { ListSort } from "@/lib/sort";
 import type { PaginatedResult, Photo, VideoStatus } from "@/lib/types";
@@ -33,6 +34,27 @@ export default function AdminPhotosPage() {
   const [toDelete, setToDelete] = useState<Photo | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [layout, setLayout] = useCatalogLayout();
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+
+  const previewItems = useMemo<PreviewItem[]>(
+    () =>
+      (result?.data ?? []).map((photo) => ({
+        id: photo.id,
+        kind: "photo",
+        title: photo.title,
+        src: photo.image_url,
+        status: photo.status,
+        details: [
+          photo.city || photo.location,
+          photo.recorded_at ? new Date(photo.recorded_at).toLocaleDateString() : null,
+          photo.file_size_bytes ? formatBytes(photo.file_size_bytes) : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        editHref: `/admin/photos/${photo.id}/edit`,
+      })),
+    [result]
+  );
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams({ page: String(page), limit: "20" });
@@ -135,12 +157,20 @@ export default function AdminPhotosPage() {
       {!loading && !error && result && result.data.length > 0 && layout === "grid" && (
         <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {result.data.map((photo) => (
+          {result.data.map((photo, i) => (
             <article key={photo.id} className="overflow-hidden rounded-2xl border border-border bg-surface">
-              <div className="relative aspect-[4/3] bg-border">
+              <button
+                type="button"
+                onClick={() => setPreviewIndex(i)}
+                className="group relative block aspect-[4/3] w-full bg-border"
+                aria-label={`View ${photo.title}`}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.image_url} alt={photo.title} className="absolute inset-0 h-full w-full object-cover" />
-              </div>
+                <img src={photo.image_url} alt={photo.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/30">
+                  <ZoomIn className="h-8 w-8 text-white opacity-0 drop-shadow transition group-hover:opacity-100" />
+                </span>
+              </button>
               <div className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="line-clamp-2 font-semibold">{photo.title}</h2>
@@ -156,9 +186,9 @@ export default function AdminPhotosPage() {
                   <Link href={`/admin/photos/${photo.id}/edit`} className="rounded-md p-2 text-muted hover:bg-border hover:text-primary">
                     <Pencil className="h-4 w-4" />
                   </Link>
-                  <a href={photo.image_url} target="_blank" rel="noreferrer" className="rounded-md p-2 text-muted hover:bg-border hover:text-primary">
+                  <button type="button" onClick={() => setPreviewIndex(i)} title="View" className="rounded-md p-2 text-muted hover:bg-border hover:text-primary">
                     <Eye className="h-4 w-4" />
-                  </a>
+                  </button>
                   <button onClick={() => setToDelete(photo)} className="rounded-md p-2 text-muted hover:bg-border hover:text-danger">
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -207,13 +237,21 @@ export default function AdminPhotosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {result.data.map((photo) => (
+              {result.data.map((photo, i) => (
                 <tr key={photo.id} className="hover:bg-background/50">
                   <td className="px-4 py-3">
-                    <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-border">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewIndex(i)}
+                      className="group relative block h-12 w-20 overflow-hidden rounded-lg bg-border"
+                      aria-label={`View ${photo.title}`}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={photo.image_url} alt={photo.title} className="absolute inset-0 h-full w-full object-cover" />
-                    </div>
+                      <img src={photo.image_url} alt={photo.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                        <ZoomIn className="h-4 w-4" />
+                      </span>
+                    </button>
                   </td>
                   <td className="max-w-[220px] truncate px-4 py-3 font-medium">{photo.title}</td>
                   <td className="px-4 py-3 text-muted">{photo.city || photo.location || "—"}</td>
@@ -231,9 +269,9 @@ export default function AdminPhotosPage() {
                       <Link href={`/admin/photos/${photo.id}/edit`} className="rounded-md p-2 text-muted hover:bg-border hover:text-primary">
                         <Pencil className="h-4 w-4" />
                       </Link>
-                      <a href={photo.image_url} target="_blank" rel="noreferrer" className="rounded-md p-2 text-muted hover:bg-border hover:text-primary">
-                        <Eye className="h-4 w-4" />
-                      </a>
+                      <button type="button" onClick={() => setPreviewIndex(i)} title="View" className="rounded-md p-2 text-muted hover:bg-border hover:text-primary">
+                    <Eye className="h-4 w-4" />
+                  </button>
                       <button onClick={() => setToDelete(photo)} className="rounded-md p-2 text-muted hover:bg-border hover:text-danger">
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -267,6 +305,13 @@ export default function AdminPhotosPage() {
           </div>
         </div>
       )}
+
+      <MediaPreview
+        items={previewItems}
+        index={previewIndex !== null && previewIndex < previewItems.length ? previewIndex : null}
+        onIndexChange={setPreviewIndex}
+        onClose={() => setPreviewIndex(null)}
+      />
 
       <ConfirmDialog
         open={!!toDelete}
