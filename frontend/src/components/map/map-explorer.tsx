@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, Film, Home, ImageIcon } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Film, Home, ImageIcon } from "lucide-react";
 import { setExplorerListOpen, useExplorerListOpen } from "@/lib/explorer-list";
 
 export type ListKind = "video" | "photo";
@@ -71,7 +71,7 @@ export function MapExplorer({
   // Drag the handle to any height between "just the handle" and nearly
   // full screen (a strip of map always stays visible). The height is
   // written straight to a CSS variable while dragging so it tracks the
-  // finger without re-rendering; a tap without movement toggles Hide/Show.
+  // finger without re-rendering; a tap without movement hides/shows it.
   function sheetLimits() {
     const handle = sheetRef.current?.querySelector<HTMLElement>(".explorer-sheet-handle");
     const min = handle?.offsetHeight ?? 44;
@@ -171,11 +171,19 @@ export function MapExplorer({
               }
             }}
             aria-expanded={sheetOpen}
-            aria-label={sheetOpen ? "Hide details (drag to resize)" : "Show details (drag to resize)"}
+            aria-label={sheetOpen ? "Drag to resize details (tap to hide)" : "Show details (drag to resize)"}
             className="explorer-sheet-handle relative flex w-full shrink-0 cursor-grab touch-none select-none flex-col items-center justify-center gap-1 px-4 lg:hidden"
           >
             <span className="h-1 w-10 rounded-full bg-foreground/25" aria-hidden />
-            <span className="text-sm font-bold text-primary">{sheetOpen ? "Hide" : "Show"}</span>
+            {sheetOpen ? (
+              <span className="flex items-center gap-1 text-sm font-bold text-primary">
+                <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+                Drag
+                <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+              </span>
+            ) : (
+              <span className="text-sm font-bold text-primary">Show</span>
+            )}
           </button>
           <div className="explorer-sheet-body flex min-h-0 flex-col gap-3">{children}</div>
         </section>
