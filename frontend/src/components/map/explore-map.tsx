@@ -1,10 +1,13 @@
 "use client";
 
+import "./rotate-setup";
+
 import { useEffect } from "react";
 import { MapContainer, useMap } from "react-leaflet";
 import type { LatLng, VideoRoute } from "@/lib/types";
 import { METRO_MANILA_CENTER } from "./pins";
 import { BaseLayers } from "./base-layers";
+import { RotateCompass } from "./rotate-compass";
 import { VideoRouteLayers } from "./video-route-map";
 import { PhotoPinLayers, type PhotoPin } from "./photo-locations-map";
 
@@ -30,9 +33,18 @@ function AutoResize() {
  */
 export function ExploreMap(props: ExploreMapProps) {
   return (
-    <MapContainer center={METRO_MANILA_CENTER} zoom={11} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
+    <MapContainer
+      center={METRO_MANILA_CENTER}
+      zoom={11}
+      scrollWheelZoom
+      rotate
+      touchRotate
+      rotateControl={false}
+      style={{ height: "100%", width: "100%" }}
+    >
       <BaseLayers />
       <AutoResize />
+      <RotateCompass />
       {props.mode === "video" && <VideoRouteLayers route={props.route} point={props.point} title={props.title} />}
       {props.mode === "photo" && (
         <PhotoPinLayers pins={props.pins} activeId={props.activeId} onSelect={props.onSelect} />

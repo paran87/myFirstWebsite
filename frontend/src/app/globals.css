@@ -758,6 +758,16 @@ p {
   color: var(--color-primary-foreground);
 }
 
+/* Compass button (leaflet-rotate): only shown once the map is rotated. */
+.explorer-compass a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.explorer-compass-needle {
+  transition: transform 0.2s ease-out;
+}
+
 /* Teardrop pins rendered with CSS (L.divIcon) — no external marker images. */
 .map-pin {
   position: relative;
