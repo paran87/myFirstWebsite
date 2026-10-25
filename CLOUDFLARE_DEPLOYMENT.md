@@ -1,20 +1,12 @@
 # Cloudflare Workers deployment (two Next.js apps)
 
-> **Status: configuration proposal.** This branch intentionally does not deploy or change production secrets. Install and commit the adapter dependencies and lockfiles, then validate both builds before merging.
+> **Status: build-validated deployment configuration.** Both frontend and backend OpenNext builds passed GitHub Actions on the current branch. Production still requires setting the Cloudflare environment variables listed below and smoke-testing the deployed URLs.
 
 This repository contains **two independent Next.js 16 apps**. Cloudflare Pages static deployment with `npx wrangler deploy` from the repository root will not work. Deploy each app as a **Cloudflare Worker with OpenNext**, with separate Worker projects pointing to the same GitHub repository.
 
-## Before merging this PR
+## Build validation
 
-For **each** of `frontend/` and `backend/`, in a checkout of this branch, run:
-
-```sh
-cd frontend # repeat in backend/
-npm install --save-dev @opennextjs/cloudflare wrangler
-npm run cf:build
-```
-
-Commit both `package.json` and `package-lock.json` from each app. Then verify `npm ci && npm run cf:build` succeeds in each app. **Do not merge until this is done.** The scripts and `open-next.config.ts` require the adapter; the dependency is not yet added because the GitHub-only editing environment cannot resolve an npm lockfile.
+GitHub Actions has successfully installed dependencies and built both `frontend/` and `backend/` for Cloudflare Workers. The Cloudflare adapter and Wrangler are declared in each app's `package.json`.
 
 ## Cloudflare dashboard: create two Workers (not Pages)
 
@@ -26,10 +18,10 @@ Use **Workers & Pages → Create → Worker → Import Git repository** (wording
 | Production branch | `main` (after merge) | `main` (after merge) |
 | Root directory | `frontend` | `backend` |
 | Build command | `npm run cf:build` | `npm run cf:build` |
-| Deploy command | `npx wrangler deploy` | `npx wrangler deploy` |
+| Deploy command | `npx opennextjs-cloudflare deploy` | `npx opennextjs-cloudflare deploy` |
 | Wrangler config | `frontend/wrangler.jsonc` | `backend/wrangler.jsonc` |
 
-The build must run **before** `wrangler deploy`. These commands assume Cloudflare executes them inside the configured root directory and installs dependencies first. If root directory cannot be set, use a supported working-directory build configuration instead.
+Set the build command to `npm run cf:build` and the deploy command to `npm run cf:deploy` (equivalent to `npx opennextjs-cloudflare deploy`). These commands assume Cloudflare executes them inside the configured root directory and installs dependencies first. If root directory cannot be set, use a supported working-directory build configuration instead.
 
 Set **frontend** production environment variables (see `frontend/.env.example`):
 - `NEXT_PUBLIC_API_URL=https://<backend-worker-host>/api`
