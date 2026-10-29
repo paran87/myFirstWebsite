@@ -78,58 +78,71 @@ export function CatalogBrowser({
 
   return (
     <>
-      <div
-        role="tablist"
-        aria-label="Catalog"
-        className="mb-8 flex w-full gap-1.5 rounded-full border border-border/80 bg-surface-2/70 p-1.5 shadow-inner sm:w-fit"
-      >
-        {TABS.map((tab) => {
-          const active = tab.kind === kind;
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.kind}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => switchTo(tab)}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-base font-bold transition-all duration-300 sm:flex-none ${
-                active
-                  ? "bg-brand-gradient text-white shadow-lg shadow-primary/25 dark:text-primary-foreground"
-                  : "text-foreground/80 hover:bg-surface hover:text-primary"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-primary">
+            {kind === "video" ? <Clapperboard className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+            {kind === "video" ? "The video archive" : "The photo archive"}
+          </p>
+          <Title className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+            {params.search ? (
+              <>
+                {kind === "video" ? "Results for " : "Photo results for "}
+                <span className="text-gradient">&ldquo;{params.search}&rdquo;</span>
+              </>
+            ) : params.city ? (
+              <>
+                {kind === "video" ? "Walks in " : "Photos from "}
+                <span className="text-gradient">{params.city}</span>
+              </>
+            ) : kind === "video" ? (
+              "Latest Documentation"
+            ) : (
+              "Street Photo Gallery"
+            )}
+          </Title>
+          <p className="text-base font-medium text-foreground/75 sm:text-lg" aria-live="polite">
+            {result ? (
+              <>
+                <span className="font-display font-extrabold text-foreground">{result.total.toLocaleString()}</span>{" "}
+                {noun}
+                {result.total === 1 ? "" : "s"} available
+              </>
+            ) : kind === "video" ? (
+              "Browse the public catalog"
+            ) : (
+              "Browse documentation photos"
+            )}
+          </p>
+        </div>
 
-      <div className="mb-6 mt-2 flex flex-col gap-1.5">
-        <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-primary">
-          {kind === "video" ? <Clapperboard className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-          {kind === "video" ? "The video archive" : "The photo archive"}
-        </p>
-        <Title className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-          {params.search ? (
-            <>
-              {kind === "video" ? "Results for " : "Photo results for "}
-              <span className="text-gradient">&ldquo;{params.search}&rdquo;</span>
-            </>
-          ) : kind === "video" ? (
-            "Latest Documentation"
-          ) : (
-            "Street Photo Gallery"
-          )}
-        </Title>
-        <p className="text-base font-medium text-foreground/75 sm:text-lg">
-          {result
-            ? `${result.total.toLocaleString()} ${noun}${result.total === 1 ? "" : "s"} available`
-            : kind === "video"
-              ? "Browse the public catalog"
-              : "Browse documentation photos"}
-        </p>
+        <div
+          role="tablist"
+          aria-label="Catalog"
+          className="order-first flex w-full shrink-0 gap-1.5 rounded-full border border-border/80 bg-surface-2/70 p-1.5 shadow-inner sm:order-none sm:w-fit"
+        >
+          {TABS.map((tab) => {
+            const active = tab.kind === kind;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.kind}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => switchTo(tab)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-base font-bold transition-all duration-300 sm:flex-none ${
+                  active
+                    ? "bg-brand-gradient text-white shadow-lg shadow-primary/25 dark:text-primary-foreground"
+                    : "text-foreground/80 hover:bg-surface hover:text-primary"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mb-6">

@@ -6,7 +6,7 @@ import { getPhotos, type PhotoListParams } from "@/lib/api";
 import { PhotoCard } from "@/components/photo/photo-card";
 import { LayoutToggle } from "@/components/ui/layout-toggle";
 import { useCatalogLayout } from "@/lib/catalog-layout";
-import { EmptyState, ErrorState, VideoCardSkeleton } from "@/components/ui/states";
+import { EmptyState, ErrorState } from "@/components/ui/states";
 import type { PaginatedResult, Photo } from "@/lib/types";
 
 export function PhotoGrid({

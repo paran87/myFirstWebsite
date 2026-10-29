@@ -13,5 +13,11 @@ export default async function AdminAppLayout({ children }: { children: React.Rea
     redirect("/admin/login");
   }
 
-  return <AdminShell email={email}>{children}</AdminShell>;
+  const siteUrl = (process.env.FRONTEND_URL || (process.env.ALLOWED_FRONTEND_ORIGINS ?? "").split(",")[0] || "").trim();
+
+  return (
+    <AdminShell email={email} siteUrl={siteUrl || undefined}>
+      {children}
+    </AdminShell>
+  );
 }

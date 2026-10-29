@@ -67,7 +67,7 @@ export function VideoCard({
         </div>
 
         <span className={`absolute flex items-center gap-1 rounded-full bg-black/65 font-mono font-semibold text-white backdrop-blur-md ${compact ? "bottom-1 right-1 gap-0.5 px-1 py-px text-[9px]" : "bottom-1.5 right-1.5 px-1.5 py-0.5 text-[10px] sm:bottom-2 sm:right-2 sm:px-2 sm:text-xs"}`}>
-          <Clock className={compact ? "h-2.5 w-2.5" : "h-2.5 w-2.5 sm:h-3 sm:w-3"} />
+          <Clock className={compact ? "h-2.5 w-2.5" : "h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-3.5 lg:w-3.5"} />
           {formatDuration(video.duration_seconds)}
         </span>
         {!isList && (
@@ -85,22 +85,22 @@ export function VideoCard({
         )}
       </div>
 
-      <div className={`flex min-w-0 flex-1 flex-col ${isList ? "justify-center gap-1 p-3 sm:p-4" : "gap-0.5 px-2 py-1.5 sm:gap-1 sm:px-3 sm:py-2.5"} ${compact ? "!gap-0.5 !px-2 !py-1.5" : ""}`}>
-        <h3 className={`font-bold leading-tight tracking-tight transition-colors group-hover:text-primary ${compact ? "line-clamp-1 text-[11px] sm:text-xs" : isList ? "line-clamp-2 text-sm sm:text-base" : "line-clamp-1 text-[13px] sm:line-clamp-2 sm:min-h-10 sm:text-[15px]"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col ${isList ? "justify-center gap-1 p-3 sm:p-4" : "gap-0.5 px-2 py-1.5 sm:gap-1 sm:px-3 sm:py-2.5 lg:gap-1.5 lg:px-4 lg:py-3.5"} ${compact ? "!gap-0.5 !px-2 !py-1.5" : ""}`}>
+        <h3 className={`font-bold leading-tight tracking-tight transition-colors group-hover:text-primary ${compact ? "line-clamp-1 text-[11px] sm:text-xs" : isList ? "line-clamp-2 text-sm sm:text-base lg:text-lg" : "line-clamp-1 text-[13px] sm:line-clamp-2 sm:min-h-[2.5em] sm:text-[15px] lg:text-lg"}`}>
           {video.title}
         </h3>
         {isList ? (
           locationLabel ? (
-            <p className={`flex items-center gap-0.5 font-medium leading-tight text-foreground/80 ${compact ? "text-[10px]" : "text-[10.5px] sm:text-xs"}`}>
-              <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-primary sm:h-3 sm:w-3" />
+            <p className={`flex items-center gap-0.5 font-medium leading-tight text-foreground/80 ${compact ? "text-[10px]" : "text-[10.5px] sm:text-xs lg:text-sm"}`}>
+              <MapPin className={`h-2.5 w-2.5 flex-shrink-0 text-primary sm:h-3 sm:w-3 ${compact ? "" : "lg:h-3.5 lg:w-3.5"}`} />
               <span className="truncate">{locationLabel}</span>
             </p>
           ) : null
         ) : (
-          <p className={`flex min-h-3.5 items-center gap-0.5 font-medium leading-tight text-foreground/80 ${compact ? "text-[10px]" : "text-[10.5px] sm:text-xs"}`}>
+          <p className={`flex min-h-3.5 items-center gap-0.5 font-medium leading-tight text-foreground/80 ${compact ? "text-[10px]" : "text-[10.5px] sm:text-xs lg:text-sm"}`}>
             {locationLabel ? (
               <>
-                <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-primary sm:h-3 sm:w-3" />
+                <MapPin className={`h-2.5 w-2.5 flex-shrink-0 text-primary sm:h-3 sm:w-3 ${compact ? "" : "lg:h-3.5 lg:w-3.5"}`} />
                 <span className="min-w-0 flex-1 truncate">{locationLabel}</span>
               </>
             ) : (
@@ -121,10 +121,10 @@ export function VideoCard({
             {video.description}
           </p>
         )}
-        <div className={`items-center justify-between font-medium leading-tight ${isList ? "flex" : compact ? "hidden" : "hidden sm:flex"} ${compact ? "gap-1" : "gap-2"} text-foreground/65 ${compact ? "text-[10px]" : "text-[10.5px] sm:text-xs"} ${isList ? "pt-0.5" : "mt-auto border-t border-border/50 pt-1 sm:pt-1.5"}`}>
+        <div className={`items-center justify-between font-medium leading-tight ${isList ? "flex" : compact ? "hidden" : "hidden sm:flex"} ${compact ? "gap-1" : "gap-2"} text-foreground/65 ${compact ? "text-[10px]" : "text-[10.5px] sm:text-xs lg:text-sm"} ${isList ? "pt-0.5" : "mt-auto border-t border-border/50 pt-1 sm:pt-1.5"}`}>
           <span className="truncate">{formatShortDate(video.recorded_at, compact)}</span>
           <span className={`flex shrink-0 items-center whitespace-nowrap ${compact ? "gap-0.5" : "gap-1"}`} title={formatViews(video.views)}>
-            <Eye className={compact ? "h-2.5 w-2.5" : "h-2.5 w-2.5 sm:h-3 sm:w-3"} />
+            <Eye className={compact ? "h-2.5 w-2.5" : "h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-3.5 lg:w-3.5"} />
             {formatViewCount(video.views)}
           </span>
         </div>

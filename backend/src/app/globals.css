@@ -5,26 +5,34 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f8fafc;
+  /* Same "Manila golden hour" palette as the public site, tuned a little
+     calmer for a work tool: warm paper, burnt-orange primary. */
+  --background: #faf6f1;
   --surface: #ffffff;
-  --foreground: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --primary: #0d9488;
+  --surface-2: #f6eee5;
+  --foreground: #1b1624;
+  --muted: #645c70;
+  --border: #ebe0d4;
+  --primary: #c8410e;
+  --primary-2: #be185d;
   --primary-foreground: #ffffff;
+  --accent: #f59e0b;
   --danger: #dc2626;
   --warning: #d97706;
   --success: #16a34a;
 }
 
 .dark {
-  --background: #0b1120;
-  --surface: #111827;
-  --foreground: #f1f5f9;
-  --muted: #94a3b8;
-  --border: #1f2937;
-  --primary: #2dd4bf;
-  --primary-foreground: #062a26;
+  --background: #0a0a17;
+  --surface: #13142a;
+  --surface-2: #1b1d38;
+  --foreground: #faf6f0;
+  --muted: #a9a3b8;
+  --border: #2a2c4c;
+  --primary: #ff8a4c;
+  --primary-2: #f472b6;
+  --primary-foreground: #1f0a02;
+  --accent: #fcd34d;
   --danger: #f87171;
   --warning: #fbbf24;
   --success: #4ade80;
@@ -33,22 +41,55 @@
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-primary: var(--primary);
+  --color-primary-2: var(--primary-2);
+  --color-accent: var(--accent);
   --color-primary-foreground: var(--primary-foreground);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-success: var(--success);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-barlow);
+  --font-display: var(--font-barlow-condensed);
+  --font-mono: var(--font-plex-mono);
 }
 
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), "Segoe UI", Arial, Helvetica, sans-serif;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+}
+/* Page titles read as headlines rather than form labels. */
+main h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.bg-brand-gradient {
+  background: linear-gradient(120deg, var(--color-primary), var(--color-primary-2));
 }
 
 @keyframes skeleton-pulse {
@@ -78,7 +119,7 @@ body {
   height: 30px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
-  background: var(--pin, #0d9488);
+  background: var(--pin, var(--color-primary));
   border: 3px solid #fff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
 }
@@ -95,5 +136,5 @@ body {
 .map-pin--start { --pin: #16a34a; }
 .map-pin--end { --pin: #dc2626; }
 .map-pin--stop { --pin: #2563eb; width: 24px; height: 24px; }
-.map-pin--photo { --pin: #0d9488; }
+.map-pin--photo { --pin: var(--color-primary); }
 .map-pin--muted { --pin: #64748b; width: 20px; height: 20px; border-width: 2px; opacity: 0.85; }

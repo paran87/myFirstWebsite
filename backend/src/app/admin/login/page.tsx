@@ -2,7 +2,7 @@
 
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Video, Loader2, AlertCircle } from "lucide-react";
+import { Footprints, Loader2, AlertCircle, LockKeyhole } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { siteConfig } from "@/lib/config";
 
@@ -69,21 +69,31 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-background p-4">
+    <main className="relative isolate flex min-h-screen flex-1 items-center justify-center overflow-hidden bg-background p-4">
+      {/* Golden-hour glow, matching the public site */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-[-18rem] -z-10 h-[36rem] w-[56rem] -translate-x-1/2 rounded-full bg-primary/25 blur-3xl dark:bg-primary/15"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute bottom-[-14rem] right-[-8rem] -z-10 h-[28rem] w-[28rem] rounded-full bg-primary-2/15 blur-3xl"
+        aria-hidden
+      />
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Video className="h-6 w-6" />
+        <div className="mb-8 flex flex-col items-center gap-4 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-lg shadow-primary/30 dark:text-primary-foreground">
+            <Footprints className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">{siteConfig.adminName}</h1>
-            <p className="text-sm text-muted">Sign in to manage videos and content.</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Admin dashboard</p>
+            <h1 className="mt-1">{siteConfig.name}</h1>
+            <p className="mt-1 text-sm text-muted">Sign in to manage videos, photos and categories.</p>
           </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-sm"
+          className="space-y-4 rounded-2xl border border-border bg-surface/90 p-6 shadow-xl shadow-black/5 backdrop-blur-md"
         >
           {error && (
             <div className="flex items-start gap-2 rounded-lg bg-danger/10 p-3 text-sm text-danger">
@@ -93,7 +103,7 @@ function LoginForm() {
           )}
 
           <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium">
+            <label htmlFor="email" className="text-sm font-semibold">
               Email / username
             </label>
             <input
@@ -103,13 +113,13 @@ function LoginForm() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
+              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-[15px] outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/15"
               placeholder="Username"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-sm font-medium">
+            <label htmlFor="password" className="text-sm font-semibold">
               Password
             </label>
             <input
@@ -119,7 +129,7 @@ function LoginForm() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/40 focus:ring-2"
+              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-[15px] outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/15"
               placeholder="••••••••"
             />
           </div>
@@ -127,10 +137,10 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-gradient px-4 py-3 text-[15px] font-bold text-white shadow-lg shadow-primary/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 disabled:translate-y-0 disabled:opacity-60 dark:text-primary-foreground"
           >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {loading ? "Signing in..." : "Login"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 

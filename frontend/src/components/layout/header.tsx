@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -46,12 +46,33 @@ export function Header({ categories }: { categories: Category[] }) {
   const menuOpen = onExplorer ? listOpen : mobileOpen;
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [query, setQuery] = useState(searchParams.get("search") ?? "");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // "/" jumps to the search box (like GitHub/YouTube); Escape closes menus.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setCategoriesOpen(false);
+        return;
+      }
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      const input = searchRef.current;
+      if (!input || input.offsetParent === null) return;
+      event.preventDefault();
+      input.focus();
+      input.select();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   function handleSearchSubmit(event: FormEvent) {
@@ -111,11 +132,18 @@ export function Header({ categories }: { categories: Category[] }) {
           >
             Photos
           </Link>
-          <div className="relative" onMouseLeave={() => setCategoriesOpen(false)}>
+          <div
+            className="relative"
+            onMouseLeave={() => setCategoriesOpen(false)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setCategoriesOpen(false);
+            }}
+          >
             <button
               onClick={() => setCategoriesOpen((v) => !v)}
               onMouseEnter={() => setCategoriesOpen(true)}
               aria-expanded={categoriesOpen}
+              aria-haspopup="true"
               className="nav-link flex items-center gap-1 rounded-lg px-3 py-2 text-base font-semibold text-foreground transition hover:text-primary"
             >
               Categories
@@ -145,11 +173,22 @@ export function Header({ categories }: { categories: Category[] }) {
           <div className="group relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted transition group-focus-within:text-primary" />
             <input
+              ref={searchRef}
+              type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search title, street, barangay, city..."
-              className="w-full rounded-full border border-border bg-surface/70 py-2.5 pl-10 pr-4 text-base text-foreground shadow-sm backdrop-blur-md placeholder:text-foreground/55 outline-none transition focus:border-primary/50 focus:bg-surface focus:ring-4 focus:ring-primary/15"
+              placeholder="Search title, street, barangay, city…"
+              aria-label="Search the archive"
+              className="peer w-full rounded-full border border-border bg-surface/70 py-2.5 pl-10 pr-12 text-base text-foreground shadow-sm backdrop-blur-md placeholder:text-foreground/55 outline-none transition focus:border-primary/50 focus:bg-surface focus:ring-4 focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden"
             />
+            {!query && (
+              <kbd
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-border bg-surface-2 px-1.5 font-mono text-xs font-semibold text-foreground/60 peer-focus:hidden"
+                aria-hidden
+              >
+                /
+              </kbd>
+            )}
           </div>
         </form>
 
@@ -182,9 +221,11 @@ export function Header({ categories }: { categories: Category[] }) {
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <input
+                type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search videos..."
+                placeholder="Search the archive…"
+                aria-label="Search the archive"
                 className="w-full rounded-full border border-border bg-surface py-3 pl-9 pr-4 text-base outline-none ring-primary/40 focus:ring-2"
               />
             </div>

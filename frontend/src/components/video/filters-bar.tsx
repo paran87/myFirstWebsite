@@ -2,15 +2,50 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { METRO_MANILA_CITIES } from "@/lib/types";
 import type { Category } from "@/lib/types";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
 
-const controlClass =
-  "w-full min-w-0 cursor-pointer rounded-full border border-border bg-surface/90 px-3.5 py-2 text-sm font-semibold text-foreground outline-none transition hover:border-primary/40 focus:border-primary/50 focus:ring-4 focus:ring-primary/15 sm:w-auto";
+/** Native select (keeps the phone pickers) styled as a pill with its own chevron. */
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  className = "",
+  highlight = !!value,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  highlight?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`relative min-w-0 ${className}`}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        className={`h-10 w-full min-w-0 cursor-pointer appearance-none rounded-full border py-0 pl-4 pr-9 text-sm font-semibold outline-none transition hover:border-primary/40 focus:border-primary/50 focus:ring-4 focus:ring-primary/15 sm:w-auto ${
+          highlight
+            ? "border-primary/40 bg-primary/10 text-primary"
+            : "border-border bg-surface/90 text-foreground"
+        }`}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        className={`pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${highlight ? "text-primary" : "text-foreground/60"}`}
+        aria-hidden
+      />
+    </div>
+  );
+}
 
 export function FiltersBar({ categories }: { categories: Category[] }) {
   const router = useRouter();
@@ -23,12 +58,14 @@ export function FiltersBar({ categories }: { categories: Category[] }) {
   const sort = searchParams.get("sort") ?? "newest";
   const search = searchParams.get("search") ?? "";
   const [query, setQuery] = useState(search);
+  // Follow the URL when the search changes elsewhere (header search, back button).
+  const [syncedSearch, setSyncedSearch] = useState(search);
+  if (syncedSearch !== search) {
+    setSyncedSearch(search);
+    setQuery(search);
+  }
 
   const hasActiveFilters = !!(city || category || year || search);
-
-  useEffect(() => {
-    setQuery(search);
-  }, [search]);
 
   useEffect(() => {
     const next = query.trim();
@@ -56,15 +93,19 @@ export function FiltersBar({ categories }: { categories: Category[] }) {
   }
 
   return (
-    <div className="glass grid grid-cols-2 items-center gap-2 rounded-xl border border-border/80 p-2 shadow-sm sm:flex sm:flex-wrap">
+    <div
+      role="search"
+      className="glass grid grid-cols-2 items-center gap-2 rounded-2xl border border-border/80 p-2 shadow-sm sm:flex sm:flex-wrap"
+    >
       <form onSubmit={handleSearchSubmit} className="relative col-span-2 min-w-0 sm:max-w-xs sm:flex-1">
-        <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/55" aria-hidden />
         <input
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search title, street, city..."
+          placeholder="Search title, street, city…"
           aria-label="Search catalog"
-          className="w-full rounded-full border border-border bg-surface/90 py-2 pl-10 pr-9 text-sm font-semibold text-foreground placeholder:font-medium placeholder:text-foreground/50 outline-none transition hover:border-primary/40 focus:border-primary/50 focus:ring-4 focus:ring-primary/15"
+          className="h-10 w-full rounded-full border border-border bg-surface/90 pl-10 pr-9 text-sm font-semibold text-foreground placeholder:font-medium placeholder:text-foreground/50 outline-none transition hover:border-primary/40 focus:border-primary/50 focus:ring-4 focus:ring-primary/15 [&::-webkit-search-cancel-button]:hidden"
         />
         {query && (
           <button
@@ -81,62 +122,53 @@ export function FiltersBar({ categories }: { categories: Category[] }) {
         )}
       </form>
 
-      <select
-        value={city}
-        onChange={(e) => updateParam("city", e.target.value)}
-        className={controlClass}
-      >
-        <option value="">All Cities</option>
+      <FilterSelect label="City" value={city} onChange={(v) => updateParam("city", v)}>
+        <option value="">All cities</option>
         {METRO_MANILA_CITIES.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
         ))}
-      </select>
+      </FilterSelect>
 
-      <select
-        value={category}
-        onChange={(e) => updateParam("category", e.target.value)}
-        className={controlClass}
-      >
-        <option value="">All Categories</option>
+      <FilterSelect label="Category" value={category} onChange={(v) => updateParam("category", v)}>
+        <option value="">All categories</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>
         ))}
-      </select>
+      </FilterSelect>
 
-      <select
-        value={year}
-        onChange={(e) => updateParam("year", e.target.value)}
-        className={controlClass}
-      >
-        <option value="">All Years</option>
+      <FilterSelect label="Year" value={year} onChange={(v) => updateParam("year", v)}>
+        <option value="">All years</option>
         {YEARS.map((y) => (
           <option key={y} value={y}>
             {y}
           </option>
         ))}
-      </select>
+      </FilterSelect>
 
-      <select
+      <FilterSelect
+        label="Sort by"
         value={sort}
-        onChange={(e) => updateParam("sort", e.target.value)}
-        className={`${controlClass} sm:ml-auto`}
+        onChange={(v) => updateParam("sort", v)}
+        highlight={false}
+        className="sm:ml-auto"
       >
-        <option value="newest">Newest First</option>
-        <option value="oldest">Oldest First</option>
-        <option value="most_viewed">Most Viewed</option>
-      </select>
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="most_viewed">Most viewed</option>
+      </FilterSelect>
 
       {hasActiveFilters && (
         <button
+          type="button"
           onClick={clearFilters}
-          className="col-span-2 flex items-center justify-center gap-1 rounded-full px-3.5 py-2 text-sm font-bold text-foreground transition hover:bg-danger/10 hover:text-danger sm:col-span-1"
+          className="col-span-2 flex h-10 items-center justify-center gap-1 rounded-full px-3.5 text-sm font-bold text-foreground/80 transition hover:bg-danger/10 hover:text-danger sm:col-span-1"
         >
           <X className="h-3.5 w-3.5" />
-          Clear
+          Clear all
         </button>
       )}
     </div>

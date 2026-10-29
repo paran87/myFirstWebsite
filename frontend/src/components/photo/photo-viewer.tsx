@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { getImageProps } from "next/image";
@@ -87,15 +87,16 @@ export function PhotoViewer({
   const router = useRouter();
   const { fullscreen, setFullscreen } = usePhotoCatalog();
   const [downloading, setDownloading] = useState(false);
-  const [portalReady, setPortalReady] = useState(false);
+  // True only after hydration, so the fullscreen portal never renders on the server.
+  const portalReady = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const gallery = photos.some((item) => item.id === photo.id) ? photos : [photo, ...photos];
   const index = gallery.findIndex((item) => item.id === photo.id);
   const previous = gallery.length > 1 ? gallery[(index - 1 + gallery.length) % gallery.length] : null;
   const next = gallery.length > 1 ? gallery[(index + 1) % gallery.length] : null;
-
-  useEffect(() => {
-    setPortalReady(true);
-  }, []);
 
   useEffect(() => {
     if (!fullscreen) return;

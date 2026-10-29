@@ -74,7 +74,7 @@ export function VideoPlayer({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-black">
+    <div className="overflow-hidden rounded-2xl border border-border bg-black">
       <video
         ref={videoRef}
         src={videoUrl}
@@ -89,18 +89,20 @@ export function VideoPlayer({
         <track kind="captions" />
       </video>
 
-      <div className="flex items-center gap-1 border-t border-border bg-surface px-2 py-1 text-[10px] sm:gap-3 sm:px-3 sm:py-2 sm:text-sm">
+      <div className="flex items-center gap-1.5 border-t border-border bg-surface px-2 py-1.5 text-[10px] sm:gap-3 sm:px-3 sm:py-2 sm:text-sm">
         <div className="flex items-center gap-1 text-muted sm:gap-1.5">
           <Gauge className="h-3 w-3 sm:h-4 sm:w-4" />
           <span className="hidden sm:inline">Speed:</span>
         </div>
-        <div className="flex gap-0.5 sm:gap-1">
+        <div className="flex gap-0.5 rounded-full bg-surface-2 p-0.5" role="group" aria-label="Playback speed">
           {SPEEDS.map((s) => (
             <button
               key={s}
+              type="button"
               onClick={() => setSpeed(s)}
-              className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:py-1 sm:text-xs ${
-                speed === s ? "bg-primary text-primary-foreground" : "text-muted hover:bg-border"
+              aria-pressed={speed === s}
+              className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums transition sm:px-2.5 sm:py-1 sm:text-xs ${
+                speed === s ? "bg-primary text-primary-foreground shadow-sm" : "text-muted hover:bg-surface hover:text-foreground"
               }`}
             >
               {s}x
@@ -110,8 +112,9 @@ export function VideoPlayer({
 
         {pipSupported && (
           <button
+            type="button"
             onClick={togglePip}
-            className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-border hover:text-foreground sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs"
+            className="ml-auto flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium text-muted hover:bg-border hover:text-foreground sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs"
           >
             <PictureInPicture2 className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="2xl:hidden">PiP</span>
