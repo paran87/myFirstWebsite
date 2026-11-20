@@ -18,11 +18,16 @@ export const uploadConfig = {
   maxPhotoSizeMb: Number(process.env.PHOTO_MAX_FILE_SIZE_MB || 20),
   maxPhotoBatchCount: Number(process.env.PHOTO_MAX_BATCH_COUNT || 30),
   allowedPhotoMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-  videoBucket: process.env.SUPABASE_VIDEO_BUCKET || "videos",
-  thumbnailBucket: process.env.SUPABASE_THUMBNAIL_BUCKET || "thumbnails",
-  photoBucket: process.env.SUPABASE_PHOTO_BUCKET || "photos",
-  storageProvider: process.env.VIDEO_STORAGE_PROVIDER || "supabase",
-  cdnUrl: process.env.VIDEO_CDN_URL || "",
+  /** R2 key prefixes (all three live in the one `MEDIA` bucket). */
+  videoBucket: "videos",
+  thumbnailBucket: "thumbnails",
+  photoBucket: "photos",
+  /**
+   * Largest file the admin can send THROUGH the Worker (`POST /api/upload`).
+   * Workers cap request bodies at 100 MB, so bigger videos must go straight
+   * to R2 with a presigned URL (see `POST /api/upload/signed-url`).
+   */
+  proxyUploadMaxBytes: 95 * 1024 * 1024,
 };
 
 export const paginationConfig = {

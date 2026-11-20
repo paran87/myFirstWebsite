@@ -1,0 +1,61 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "myfirstwebsite",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": { "enabled": true },
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // Database. Create it once with:  npx wrangler d1 create wmm-db
+  // then paste the printed database_id below. (Local dev ignores the id.)
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wmm-db",
+      "database_id": "REPLACE_WITH_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Videos, thumbnails and photos. Create it once with:
+  //   npx wrangler r2 bucket create wmm-media
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "wmm-media"
+    }
+  ],
+
+  // Non-secret settings. Secrets go in with `npx wrangler secret put <NAME>`
+  // (see .dev.vars.example for the full list).
+  "vars": {
+    "NEXT_PUBLIC_SITE_NAME": "Walk Metro Manila",
+
+    // Cloudflare Access (Zero Trust → Access → Applications → this app).
+    "ACCESS_TEAM_DOMAIN": "your-team.cloudflareaccess.com",
+    "ACCESS_AUD": "",
+    // Optional extra allow-list on top of the Access policy (comma-separated).
+    "ADMIN_EMAILS": "",
+
+    // Public URL of the R2 bucket (custom domain, e.g. https://media.example.com).
+    // Leave empty to serve files through this Worker at /api/files/*.
+    "R2_PUBLIC_URL": "",
+    // Needed only for direct browser → R2 uploads of large videos.
+    "R2_ACCOUNT_ID": "",
+    "R2_BUCKET_NAME": "wmm-media",
+
+    // Public site: allowed CORS origin(s) and where to send cache-refresh pings.
+    "ALLOWED_FRONTEND_ORIGINS": "https://your-site.example.com",
+    "FRONTEND_URL": "https://your-site.example.com",
+
+    "VIDEO_MAX_FILE_SIZE_MB": "2048",
+    "THUMBNAIL_MAX_FILE_SIZE_MB": "10",
+    "PHOTO_MAX_FILE_SIZE_MB": "20",
+    "PHOTO_MAX_BATCH_COUNT": "30"
+  }
+}

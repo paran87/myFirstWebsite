@@ -1,0 +1,13 @@
+# Local development secrets for `next dev` / `wrangler dev`.
+# Copy to `.dev.vars` (git-ignored). In production use `wrangler secret put`.
+
+# Local-only admin bypass. Ignored when NODE_ENV=production.
+DEV_ADMIN_EMAIL=admin@example.com
+
+# Must equal the frontend's REVALIDATE_SECRET.
+REVALIDATE_SECRET=change-me-to-a-long-random-string
+
+# Only for direct browser -> R2 uploads of large videos (S3-compatible API).
+# Create under R2 -> Manage API tokens -> "Object Read & Write" for the bucket.
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=

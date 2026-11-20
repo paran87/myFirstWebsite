@@ -87,7 +87,7 @@ export interface Video {
 
   latitude: number | null;
   longitude: number | null;
-  /** Null until migration 0005 is applied and a route is set. */
+  /** Null until a route is set. */
   route?: VideoRoute | null;
 
   recorded_at: string | null;

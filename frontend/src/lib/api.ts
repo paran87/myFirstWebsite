@@ -26,7 +26,7 @@ function buildQuery(params: Record<string, string | number | undefined>): string
 
 async function request<T>(path: string, revalidateSeconds = 30, tags: string[] = []): Promise<T> {
   const response = await fetch(`${apiBase()}${path}`, {
-    // Cached briefly so every page view doesn't hit Supabase. The admin
+    // Cached briefly so every page view doesn't hit the backend. The admin
     // backend calls /api/revalidate with these tags after each change, so
     // edits show up right away instead of when the cache expires.
     next: { revalidate: revalidateSeconds, tags },

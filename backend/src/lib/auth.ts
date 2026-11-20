@@ -1,13 +1,7 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import {
-  DEV_ADMIN_COOKIE,
-  getDevAdminProfile,
-  hasDevAdminSession,
-  isDevAdminLoginEnabled,
-} from "@/lib/dev-auth";
+import { cookies, headers } from "next/headers";
+import { verifyAccessJwt } from "@/lib/access";
+import { setting, settingList } from "@/lib/cf";
 import type { Profile } from "@/lib/types";
 
 export class UnauthorizedError extends Error {
@@ -17,59 +11,93 @@ export class ForbiddenError extends Error {
   status = 403;
 }
 
-/**
- * Verifies the caller has an authenticated Supabase session AND a
- * `profiles` row with role `admin`/`editor`. Throws `UnauthorizedError`
- * (no session) or `ForbiddenError` (session but not an admin) — route
- * handlers should catch these via `handleApiError`.
- *
- * This is the server-side authorization check required by every
- * admin-only API route; the middleware redirect alone is NOT sufficient
- * protection for API routes (which don't get redirected, they must
- * return proper 401/403 responses).
- */
-async function getDevAdminSessionIfValid(): Promise<{ userId: string; profile: Profile } | null> {
-  if (!isDevAdminLoginEnabled()) return null;
-  const cookieStore = await cookies();
-  const value = cookieStore.get(DEV_ADMIN_COOKIE)?.value;
-  if (!hasDevAdminSession(value)) return null;
+type AdminSession = { userId: string; profile: Profile };
 
-  // The dev login has no auth.users row, so videos.created_by must be null
-  // (the column references profiles, which references auth.users).
-  const profile = getDevAdminProfile();
-  return { userId: "", profile };
+function profileFor(email: string): Profile {
+  const now = new Date().toISOString();
+  return {
+    // There is no user table: Cloudflare Access is the identity provider, so
+    // the email address is the user id (and is stored in `created_by`).
+    id: email,
+    email,
+    full_name: null,
+    role: "admin",
+    created_at: now,
+    updated_at: now,
+  };
 }
 
-export async function requireAdmin(): Promise<{ userId: string; profile: Profile }> {
-  const devSession = await getDevAdminSessionIfValid();
-  if (devSession) return devSession;
+/**
+ * A browser request that comes from another origin must never act with the
+ * admin's cookie (CSRF). Same-origin and non-browser requests have no
+ * mismatching Origin header.
+ */
+function isCrossOrigin(headerList: Headers): boolean {
+  const origin = headerList.get("origin");
+  if (!origin) return false;
+  const host = headerList.get("x-forwarded-host") || headerList.get("host");
+  try {
+    return new URL(origin).host !== host;
+  } catch {
+    return true;
+  }
+}
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
+/**
+ * Local-only shortcut for `next dev`, where there is no Cloudflare Access in
+ * front of the app. Never active in a production build.
+ *
+ * It only applies to requests that come from a browser on this same origin
+ * (the admin pages and their XHRs). Server-to-server calls, such as the
+ * public site fetching the API, send no Sec-Fetch-Site header and stay
+ * anonymous, so the public API behaves in dev exactly as it does in
+ * production. (curl as admin: add `-H "Sec-Fetch-Site: same-origin"`.)
+ */
+function devBypassEmail(headerList: Headers): string {
+  if (process.env.NODE_ENV === "production") return "";
+  const site = headerList.get("sec-fetch-site");
+  if (site !== "same-origin" && site !== "none") return "";
+  return setting("DEV_ADMIN_EMAIL");
+}
 
-  if (error || !data.user) {
+/**
+ * Verifies the caller was authenticated by Cloudflare Access and may use the
+ * admin. Throws `UnauthorizedError` (no valid Access token) or
+ * `ForbiddenError` (valid token, but the email is not on ADMIN_EMAILS).
+ *
+ * Every admin-only API route must call this: the Access application only
+ * guards `/admin*` pages, while `/api/*` also serves the public site.
+ */
+export async function requireAdmin(): Promise<AdminSession> {
+  const headerList = await headers();
+  if (isCrossOrigin(headerList)) {
+    throw new ForbiddenError("Cross-origin requests are not allowed.");
+  }
+
+  const bypass = devBypassEmail(headerList);
+  if (bypass) return { userId: bypass, profile: profileFor(bypass) };
+
+  const cookieStore = await cookies();
+  const token = headerList.get("cf-access-jwt-assertion") || cookieStore.get("CF_Authorization")?.value;
+  if (!token) {
     throw new UnauthorizedError("You must be signed in to perform this action.");
   }
 
-  // Use the admin client for the profile lookup so this works even before
-  // RLS-visible session propagation edge cases; it's a read-only lookup
-  // scoped to a single known id.
-  const admin = createSupabaseAdminClient();
-  const { data: profile, error: profileError } = await admin
-    .from("profiles")
-    .select("*")
-    .eq("id", data.user.id)
-    .maybeSingle();
-
-  if (profileError || !profile) {
-    throw new ForbiddenError("No admin profile found for this account.");
+  const payload = await verifyAccessJwt(token, {
+    teamDomain: setting("ACCESS_TEAM_DOMAIN"),
+    audience: setting("ACCESS_AUD"),
+  });
+  const email = payload?.email?.trim().toLowerCase();
+  if (!payload || !email) {
+    throw new UnauthorizedError("Your Cloudflare Access session is missing or expired.");
   }
 
-  if (profile.role !== "admin" && profile.role !== "editor") {
+  const allowList = settingList("ADMIN_EMAILS").map((item) => item.toLowerCase());
+  if (allowList.length > 0 && !allowList.includes(email)) {
     throw new ForbiddenError("This account does not have admin access.");
   }
 
-  return { userId: data.user.id, profile: profile as Profile };
+  return { userId: email, profile: profileFor(email) };
 }
 
 /**
@@ -78,7 +106,7 @@ export async function requireAdmin(): Promise<{ userId: string; profile: Profile
  * visitors vs. admins (e.g. `GET /api/videos` exposes more fields/filters
  * to admins) without forcing every visitor to be logged in.
  */
-export async function tryGetAdmin(): Promise<{ userId: string; profile: Profile } | null> {
+export async function tryGetAdmin(): Promise<AdminSession | null> {
   try {
     return await requireAdmin();
   } catch {

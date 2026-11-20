@@ -1,21 +1,8 @@
-import { Readable } from "node:stream";
 import { NextRequest } from "next/server";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
 import { jsonError } from "@/lib/api-response";
-import { openLocalUploadStream, statLocalUpload } from "@/lib/local-storage";
-
-export const runtime = "nodejs";
-
-const MIME_BY_EXT: Record<string, string> = {
-  mp4: "video/mp4",
-  mov: "video/quicktime",
-  webm: "video/webm",
-  mkv: "video/x-matroska",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-};
+import { getMedia } from "@/lib/cf";
+import { isMediaBucket, objectKey } from "@/lib/storage";
 
 interface Params {
   params: Promise<{ path: string[] }>;
@@ -25,64 +12,54 @@ export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request);
 }
 
+/**
+ * GET /api/files/<bucket>/<path> — streams an object from R2 with Range
+ * support (needed for video seeking). Used when R2_PUBLIC_URL is not set;
+ * with a public custom domain on the bucket, files bypass the Worker.
+ */
 export async function GET(request: NextRequest, { params }: Params) {
   const segments = (await params).path ?? [];
   const [bucket, ...rest] = segments;
   const objectPath = rest.join("/");
 
-  if (!bucket || !objectPath) {
+  if (!bucket || !objectPath || !isMediaBucket(bucket)) {
     return jsonError("File not found.", 404);
   }
 
+  let key: string;
   try {
-    const fileStat = await statLocalUpload(bucket, objectPath);
-    const size = fileStat.size;
-    const ext = objectPath.split(".").pop()?.toLowerCase() ?? "";
-    const contentType = MIME_BY_EXT[ext] || "application/octet-stream";
-    const cors = corsHeaders(request);
-    const range = request.headers.get("range");
-
-    if (range) {
-      const match = /bytes=(\d*)-(\d*)/.exec(range);
-      const start = match?.[1] ? Number(match[1]) : 0;
-      const end = match?.[2] ? Number(match[2]) : size - 1;
-      if (Number.isNaN(start) || Number.isNaN(end) || start > end || end >= size) {
-        return new Response(null, {
-          status: 416,
-          headers: { "Content-Range": `bytes */${size}`, ...cors },
-        });
-      }
-
-      const stream = openLocalUploadStream(bucket, objectPath, { start, end });
-      return new Response(Readable.toWeb(stream) as ReadableStream, {
-        status: 206,
-        headers: {
-          "Content-Type": contentType,
-          "Content-Length": String(end - start + 1),
-          "Content-Range": `bytes ${start}-${end}/${size}`,
-          "Accept-Ranges": "bytes",
-          "Cache-Control": "public, max-age=31536000, immutable",
-          "Access-Control-Expose-Headers": "Content-Range, Accept-Ranges, Content-Length",
-          ...cors,
-        },
-      });
-    }
-
-    const stream = openLocalUploadStream(bucket, objectPath);
-    return new Response(Readable.toWeb(stream) as ReadableStream, {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Content-Length": String(size),
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=31536000, immutable",
-        ...cors,
-      },
-    });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return jsonError("File not found.", 404);
-    }
-    return jsonError(error instanceof Error ? error.message : "File not found.", 404);
+    key = objectKey(bucket, objectPath);
+  } catch {
+    return jsonError("File not found.", 404);
   }
+
+  const object = await getMedia().get(key, {
+    range: request.headers,
+    onlyIf: request.headers,
+  });
+  if (!object) return jsonError("File not found.", 404);
+
+  const headers = new Headers(corsHeaders(request));
+  object.writeHttpMetadata(headers);
+  headers.set("ETag", object.httpEtag);
+  headers.set("Accept-Ranges", "bytes");
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  headers.set("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges, Content-Length");
+
+  // A failed If-None-Match / If-Match precondition returns metadata without a body.
+  if (!("body" in object) || !object.body) {
+    return new Response(null, { status: 304, headers });
+  }
+
+  let status = 200;
+  if (request.headers.has("range") && object.range) {
+    const { offset = 0, length = object.size - offset } = object.range as { offset?: number; length?: number };
+    headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
+    headers.set("Content-Length", String(length));
+    status = 206;
+  } else {
+    headers.set("Content-Length", String(object.size));
+  }
+
+  return new Response(object.body, { status, headers });
 }

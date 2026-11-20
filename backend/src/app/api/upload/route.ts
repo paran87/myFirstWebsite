@@ -1,16 +1,10 @@
 import { NextRequest } from "next/server";
-import crypto from "node:crypto";
 import { requireAdmin } from "@/lib/auth";
 import { jsonOk, jsonError, handleApiError } from "@/lib/api-response";
 import { uploadConfig } from "@/lib/config";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { resolvePhotoMimeType, resolveThumbnailMimeType, resolveVideoMimeType } from "@/lib/mime";
-import { StorageTooLargeError, uploadToSupabaseStorage, VIDEO_STORAGE_MAX_BYTES } from "@/lib/supabase/storage-upload";
-import { localPublicUrl, saveLocalUpload, SUPABASE_SAFE_UPLOAD_BYTES } from "@/lib/local-storage";
-
-// Vercel Hobby caps serverless functions at 300s (Pro allows up to 800s).
-export const maxDuration = 300;
-export const runtime = "nodejs";
+import { publicFileUrl, putObject } from "@/lib/storage";
 
 const IMAGE_UPLOAD_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -27,21 +21,20 @@ export interface StoredUpload {
 /**
  * POST /api/upload (multipart/form-data)
  *
- * The browser uploads the file to THIS server, which then stores it in
- * Supabase Storage using the service role key. Direct browser → Supabase
- * uploads fail with "fetch failed" because Supabase Storage does not allow
- * cross-origin requests from localhost (or custom origins) by default.
+ * The browser sends the file to THIS Worker, which stores it in R2 through
+ * the `MEDIA` binding. Used for thumbnails and photos, and for videos up to
+ * ~95 MB. Bigger videos go straight to R2 with a presigned URL
+ * (`POST /api/upload/signed-url`) because Workers cap request bodies at 100 MB.
  *
  * Field `kind`: "video" | "thumbnail" | "photo"
- * Field `file` (or repeated `files`): one or more binaries.
- * Photos may send multiple files in a single request (up to maxPhotoBatchCount).
+ * Field `file` (or repeated `files`): the binary. Photos may send several.
  */
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAdmin();
 
     const { allowed } = rateLimit(`upload:${getClientIp(request)}:${userId}`, {
-      limit: 20,
+      limit: 200,
       windowMs: 60_000,
     });
     if (!allowed) return jsonError("Too many upload requests. Please slow down.", 429);
@@ -80,7 +73,14 @@ export async function POST(request: NextRequest) {
       if ("error" in checked) {
         return jsonError(checked.error, checked.status);
       }
-      stored.push(await storeUpload(request.nextUrl.origin, checked.bucket, checked.path, file, checked.contentType));
+      await putObject(checked.bucket, checked.path, file, checked.contentType);
+      stored.push({
+        bucket: checked.bucket,
+        path: checked.path,
+        publicUrl: publicFileUrl(request.nextUrl.origin, checked.bucket, checked.path),
+        fileSizeBytes: file.size,
+        fileName: file.name,
+      });
     }
 
     if (stored.length === 1) {
@@ -118,9 +118,11 @@ function validateUpload(kind: UploadKind, file: File): ValidatedUpload {
     : isPhoto
       ? uploadConfig.allowedPhotoMimeTypes ?? IMAGE_UPLOAD_TYPES
       : uploadConfig.allowedThumbnailMimeTypes ?? IMAGE_UPLOAD_TYPES;
-  const maxBytes = isVideo
-    ? Math.max(uploadConfig.maxVideoSizeMb * 1024 * 1024, VIDEO_STORAGE_MAX_BYTES)
-    : (isPhoto ? uploadConfig.maxPhotoSizeMb : uploadConfig.maxThumbnailSizeMb) * 1024 * 1024;
+  const configuredMax = (isVideo
+    ? uploadConfig.maxVideoSizeMb
+    : isPhoto
+      ? uploadConfig.maxPhotoSizeMb
+      : uploadConfig.maxThumbnailSizeMb) * 1024 * 1024;
   const bucket = isVideo
     ? uploadConfig.videoBucket
     : isPhoto
@@ -133,9 +135,14 @@ function validateUpload(kind: UploadKind, file: File): ValidatedUpload {
       status: 415 as const,
     };
   }
+
+  const maxBytes = Math.min(configuredMax, uploadConfig.proxyUploadMaxBytes);
   if (file.size > maxBytes) {
+    const tooBigForWorker = configuredMax > uploadConfig.proxyUploadMaxBytes && file.size <= configuredMax;
     return {
-      error: `"${file.name}" is too large. Maximum allowed size is ${Math.round(maxBytes / (1024 * 1024))} MB.`,
+      error: tooBigForWorker
+        ? `"${file.name}" is too large to upload through the server (limit ${Math.round(maxBytes / (1024 * 1024))} MB). Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY so large videos upload directly to R2.`
+        : `"${file.name}" is too large. Maximum allowed size is ${Math.round(maxBytes / (1024 * 1024))} MB.`,
       status: 413 as const,
     };
   }
@@ -145,40 +152,5 @@ function validateUpload(kind: UploadKind, file: File): ValidatedUpload {
     bucket,
     contentType,
     path: `${new Date().getFullYear()}/${crypto.randomUUID()}.${safeExt}`,
-  };
-}
-
-async function storeUpload(
-  origin: string,
-  bucket: string,
-  path: string,
-  file: File,
-  contentType: string
-): Promise<StoredUpload> {
-  const bytes = await file.arrayBuffer();
-  const useLocalFirst = file.size > SUPABASE_SAFE_UPLOAD_BYTES;
-
-  if (!useLocalFirst) {
-    try {
-      const { publicUrl } = await uploadToSupabaseStorage(bucket, path, bytes, contentType);
-      return {
-        bucket,
-        path,
-        publicUrl,
-        fileSizeBytes: file.size,
-        fileName: file.name,
-      };
-    } catch (error) {
-      if (!(error instanceof StorageTooLargeError)) throw error;
-    }
-  }
-
-  await saveLocalUpload(bucket, path, Buffer.from(bytes));
-  return {
-    bucket,
-    path,
-    publicUrl: localPublicUrl(origin, bucket, path),
-    fileSizeBytes: file.size,
-    fileName: file.name,
   };
 }

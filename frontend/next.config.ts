@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+// Makes the bindings from wrangler.jsonc (and .dev.vars) available to `next dev`.
+initOpenNextCloudflareForDev();
 
 function hostnameOf(url: string | undefined) {
   try {
@@ -8,9 +12,11 @@ function hostnameOf(url: string | undefined) {
   }
 }
 
-const supabaseHostname = hostnameOf(process.env.NEXT_PUBLIC_SUPABASE_URL);
-// Large uploads that fall back to the backend's own storage are served from
-// `<backend>/api/files/...`, so that host must be allowed too.
+// Media (videos, thumbnails, photos) lives in Cloudflare R2. It is served either
+// from the bucket's public custom domain (NEXT_PUBLIC_MEDIA_URL) or, when that
+// is not set, from the admin Worker at `<backend>/api/files/...`. Both hosts
+// must be allowed for next/image.
+const mediaHostname = hostnameOf(process.env.NEXT_PUBLIC_MEDIA_URL);
 const backendHostname = hostnameOf(process.env.NEXT_PUBLIC_API_URL);
 
 const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").replace(/\/+$/, "");
@@ -23,10 +29,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      ...(supabaseHostname
-        ? [{ protocol: "https" as const, hostname: supabaseHostname, pathname: "/storage/v1/object/public/**" }]
-        : []),
-      { protocol: "https" as const, hostname: "**.supabase.co", pathname: "/storage/v1/object/public/**" },
+      ...(mediaHostname ? [{ protocol: "https" as const, hostname: mediaHostname }] : []),
       ...(backendHostname && backendHostname !== "localhost"
         ? [{ protocol: "https" as const, hostname: backendHostname, pathname: "/api/files/**" }]
         : []),
@@ -35,7 +38,7 @@ const nextConfig: NextConfig = {
     // WebP only: near-AVIF savings, much faster to encode, half the variants.
     formats: ["image/webp"],
     // A small, fixed set of widths/qualities keeps the number of distinct
-    // optimized variants (and the Vercel image quota) low.
+    // optimized variants (and the Cloudflare Images transformation quota) low.
     deviceSizes: [640, 828, 1080, 1280, 1920],
     imageSizes: [128, 256, 384],
     qualities: [60, 75, 85],

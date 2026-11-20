@@ -6,7 +6,7 @@ export const videoStatusSchema = z.enum(["draft", "published", "private", "delet
 
 const latLngSchema = z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)]);
 
-/** Walked route drawn on the public map; see supabase/migrations/0005_video_route.sql. */
+/** Walked route drawn on the public map; stored as JSON in videos.route (see migrations/0001_init.sql). */
 export const videoRouteSchema = z.object({
   mode: z.enum(["walking", "driving", "straight"]),
   points: z.array(latLngSchema).min(2).max(50),
@@ -44,7 +44,13 @@ export const createVideoSchema = z.object({
   status: videoStatusSchema.default("draft"),
 });
 
-export const updateVideoSchema = createVideoSchema.partial();
+// NOTE: Zod 4's `.partial()` keeps `.default()` values, so a PATCH containing only
+// `{ title }` would silently reset `tags` to [] and `status` to "draft". The update
+// schemas therefore redefine those fields without defaults.
+export const updateVideoSchema = createVideoSchema.partial().extend({
+  tags: createVideoSchema.shape.tags.removeDefault().optional(),
+  status: videoStatusSchema.optional(),
+});
 
 export const createCategorySchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(100),
@@ -52,7 +58,9 @@ export const createCategorySchema = z.object({
   is_active: z.boolean().optional().default(true),
 });
 
-export const updateCategorySchema = createCategorySchema.partial();
+export const updateCategorySchema = createCategorySchema.partial().extend({
+  is_active: z.boolean().optional(),
+});
 
 export const createPhotoSchema = z.object({
   title: z.string().trim().min(1, "Title is required.").max(200),
@@ -80,7 +88,10 @@ export const createPhotoSchema = z.object({
   status: videoStatusSchema.default("draft"),
 });
 
-export const updatePhotoSchema = createPhotoSchema.partial();
+export const updatePhotoSchema = createPhotoSchema.partial().extend({
+  tags: createPhotoSchema.shape.tags.removeDefault().optional(),
+  status: videoStatusSchema.optional(),
+});
 
 export const createPhotosBatchSchema = z
   .array(createPhotoSchema)

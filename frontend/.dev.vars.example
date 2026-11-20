@@ -1,0 +1,5 @@
+# Local development secrets for `next dev` / `wrangler dev`.
+# Copy to `.dev.vars` (git-ignored). In production use `wrangler secret put`.
+
+# Must equal the admin app's REVALIDATE_SECRET.
+REVALIDATE_SECRET=change-me-to-a-long-random-string

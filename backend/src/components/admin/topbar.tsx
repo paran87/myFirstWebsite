@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Menu, Sun, Moon, LogOut } from "lucide-react";
-import { toast } from "sonner";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function AdminTopbar({
   email,
@@ -16,13 +14,18 @@ export function AdminTopbar({
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  async function handleLogout() {
-    await fetch("/api/auth/dev-logout", { method: "POST" }).catch(() => {});
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    toast.success("Signed out.");
-    router.push("/admin/login");
-    router.refresh();
+  function handleLogout() {
+    // Cloudflare Access owns the session: its logout endpoint clears the
+    // cookie and returns to the Access login screen. It does not exist on
+    // localhost, where there is nothing to sign out of.
+    const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    if (isLocal) {
+      router.push("/admin/login");
+      router.refresh();
+      return;
+    }
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Cloudflare path, not a Next.js page
+    window.location.href = "/cdn-cgi/access/logout";
   }
 
   return (

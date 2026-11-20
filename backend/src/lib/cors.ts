@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { setting } from "@/lib/cf";
 
 /**
  * Small CORS helper for the handful of PUBLIC read endpoints that the
@@ -9,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
  * admin dashboard) is left untouched.
  */
 function getAllowedOrigins(): string[] {
-  const configured = process.env.ALLOWED_FRONTEND_ORIGINS || process.env.NEXT_PUBLIC_SITE_URL || "";
+  const configured = setting("ALLOWED_FRONTEND_ORIGINS") || setting("NEXT_PUBLIC_SITE_URL");
   return configured
     .split(",")
     // Tolerate "https://site.app/" as well as "https://site.app".

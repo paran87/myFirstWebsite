@@ -1,15 +1,16 @@
 import exifr from "exifr";
 import { requireAdmin } from "@/lib/auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { listPhotosMissingGps, setPhotoGps } from "@/lib/db";
 import { jsonOk, handleApiError } from "@/lib/api-response";
 import { isLatLng, roundCoord } from "@/lib/geo";
 import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
-export const runtime = "nodejs";
-export const maxDuration = 300;
-
-/** Photos per request; the admin UI calls again until `remaining` is 0. */
-const BATCH_SIZE = 40;
+/**
+ * Photos per request; the admin UI calls again until `remaining` is 0. Kept
+ * small because each photo can need two fetches and a Free-plan Worker allows
+ * 50 subrequests per request.
+ */
+const BATCH_SIZE = 20;
 const CONCURRENCY = 5;
 /** JPEG/PNG keep EXIF near the start of the file, so a small range is enough. */
 const HEAD_BYTES = 256 * 1024;
@@ -67,20 +68,8 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => ({}))) as { skip?: unknown };
     const skip = Array.isArray(body.skip) ? body.skip.filter((id): id is string => typeof id === "string") : [];
 
-    const admin = createSupabaseAdminClient();
-    let query = admin
-      .from("photos")
-      .select("id, image_url", { count: "exact" })
-      .is("deleted_at", null)
-      .or("latitude.is.null,longitude.is.null")
-      .order("created_at", { ascending: false })
-      .limit(BATCH_SIZE);
-    if (skip.length) query = query.not("id", "in", `(${skip.join(",")})`);
+    const { rows, total } = await listPhotosMissingGps(BATCH_SIZE, skip);
 
-    const { data, error, count } = await query;
-    if (error) throw error;
-
-    const rows = data ?? [];
     const updated: string[] = [];
     const noGps: string[] = [];
     const failed: string[] = [];
@@ -91,19 +80,19 @@ export async function POST(request: Request) {
           const gps = await readGps(row.image_url);
           if (gps === "error") return failed.push(row.id);
           if (!gps) return noGps.push(row.id);
-          const { error: updateError } = await admin
-            .from("photos")
-            .update({ latitude: gps[0], longitude: gps[1] })
-            .eq("id", row.id);
-          if (updateError) failed.push(row.id);
-          else updated.push(row.id);
+          try {
+            await setPhotoGps(row.id, gps[0], gps[1]);
+            updated.push(row.id);
+          } catch {
+            failed.push(row.id);
+          }
         })
       );
     }
 
     if (updated.length > 0) await revalidateFrontend(["photos", ...updated.map((id) => `photo:${id}`)]);
 
-    const remaining = Math.max(0, (count ?? rows.length) - rows.length);
+    const remaining = Math.max(0, total - rows.length);
     return jsonOk({
       checked: rows.length,
       updated: updated.length,

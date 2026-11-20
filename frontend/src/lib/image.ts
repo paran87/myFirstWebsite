@@ -8,7 +8,7 @@ function hostnameOf(url: string | undefined) {
   }
 }
 
-const supabaseHostname = hostnameOf(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const mediaHostname = hostnameOf(process.env.NEXT_PUBLIC_MEDIA_URL);
 const backendHostname = hostnameOf(process.env.NEXT_PUBLIC_API_URL);
 
 /**
@@ -22,8 +22,7 @@ export function canOptimizeImage(src: string | null | undefined): src is string 
   try {
     const url = new URL(src);
     if (url.protocol !== "https:") return false;
-    const isStorage = url.pathname.startsWith("/storage/v1/object/public/");
-    if (isStorage && (url.hostname.endsWith(".supabase.co") || url.hostname === supabaseHostname)) return true;
+    if (mediaHostname && url.hostname === mediaHostname) return true;
     if (backendHostname && url.hostname === backendHostname && url.pathname.startsWith("/api/files/")) return true;
     return url.hostname === "images.unsplash.com";
   } catch {

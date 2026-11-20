@@ -391,7 +391,7 @@ export function VideoForm({ mode, initialVideo }: VideoFormProps) {
             </ul>
           )}
           <p className="mt-2 text-xs text-muted">
-            Max {CLIENT_UPLOAD_LIMITS.maxVideoMb} MB (2 GB) each. Files over 40 MB are stored on this server so Supabase's free 50 MB cap does not block them.
+            Max {CLIENT_UPLOAD_LIMITS.maxVideoMb} MB (2 GB) each. Videos over 90 MB upload directly to Cloudflare R2.
             {mode === "create" && " Select several files to upload them together with the same location and status."}
           </p>
         </div>

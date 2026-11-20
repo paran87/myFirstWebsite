@@ -23,10 +23,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   const isJson = response.headers.get("content-type")?.includes("application/json");
-  const body = isJson ? await response.json().catch(() => null) : null;
+  const body = (isJson ? await response.json().catch(() => null) : null) as { error?: string } | null;
 
   if (!response.ok) {
-    throw new Error((body && (body.error as string)) || `Request failed (${response.status}).`);
+    throw new Error((body && body.error) || `Request failed (${response.status}).`);
   }
 
   return body as T;
