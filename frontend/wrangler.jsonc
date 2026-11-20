@@ -30,7 +30,7 @@
     {
       "binding": "NEXT_TAG_CACHE_D1",
       "database_name": "wmm-cache",
-      "database_id": "REPLACE_WITH_DATABASE_ID",
+      "database_id": "5132b806-df07-4cf0-8d6d-53aa7d64623d",
       "migrations_dir": "migrations"
     }
   ],
