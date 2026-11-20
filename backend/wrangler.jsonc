@@ -50,8 +50,8 @@
     "R2_BUCKET_NAME": "wmm-media",
 
     // Public site: allowed CORS origin(s) and where to send cache-refresh pings.
-    "ALLOWED_FRONTEND_ORIGINS": "https://your-site.example.com",
-    "FRONTEND_URL": "https://your-site.example.com",
+    "ALLOWED_FRONTEND_ORIGINS": "https://myfirstwebsite-frontend.bragz87.workers.dev",
+    "FRONTEND_URL": "https://myfirstwebsite-frontend.bragz87.workers.dev",
 
     "VIDEO_MAX_FILE_SIZE_MB": "2048",
     "THUMBNAIL_MAX_FILE_SIZE_MB": "10",

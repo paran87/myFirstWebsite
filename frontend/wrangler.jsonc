@@ -41,9 +41,9 @@
   // variables in the Cloudflare dashboard (or in .env.production) as well.
   "vars": {
     "NEXT_PUBLIC_SITE_NAME": "Walk Metro Manila",
-    "NEXT_PUBLIC_SITE_URL": "https://your-site.example.com",
-    "NEXT_PUBLIC_ADMIN_URL": "https://admin.example.com",
-    "NEXT_PUBLIC_API_URL": "https://admin.example.com/api",
+    "NEXT_PUBLIC_SITE_URL": "https://myfirstwebsite-frontend.bragz87.workers.dev",
+    "NEXT_PUBLIC_ADMIN_URL": "https://myfirstwebsite.bragz87.workers.dev",
+    "NEXT_PUBLIC_API_URL": "https://myfirstwebsite.bragz87.workers.dev/api",
     "NEXT_PUBLIC_MEDIA_URL": ""
   }
 }
