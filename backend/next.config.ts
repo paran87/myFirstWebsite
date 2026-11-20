@@ -1,33 +1,13 @@
 import type { NextConfig } from "next";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
-const supabaseHostname = (() => {
-  try {
-    return process.env.NEXT_PUBLIC_SUPABASE_URL
-      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-      : undefined;
-  } catch {
-    return undefined;
-  }
-})();
+// Makes the D1 / R2 bindings from wrangler.jsonc (and .dev.vars) available to
+// `next dev`, backed by local simulations in .wrangler/state.
+initOpenNextCloudflareForDev();
 
-const nextConfig: NextConfig = {
-  // Admin uploads pass through this server (avoids Supabase Storage CORS
-  // blocking direct browser uploads from localhost). Raise the cap so
-  // body-camera videos can be posted to /api/upload.
-  experimental: {
-    proxyClientMaxBodySize: "2048mb",
-    serverActions: {
-      bodySizeLimit: "2gb",
-    },
-  },
-  images: {
-    remotePatterns: [
-      ...(supabaseHostname
-        ? [{ protocol: "https" as const, hostname: supabaseHostname, pathname: "/storage/v1/object/public/**" }]
-        : []),
-      { protocol: "https" as const, hostname: "**.supabase.co", pathname: "/storage/v1/object/public/**" },
-    ],
-  },
-};
+// Admin pages and API routes are fully dynamic. Large uploads do not pass
+// through this app: videos over ~90 MB go straight to R2 (presigned URL) and
+// everything else is capped by the Worker request limit.
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

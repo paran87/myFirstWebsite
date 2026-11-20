@@ -2,6 +2,11 @@ import type { MetadataRoute } from "next";
 import { getVideos } from "@/lib/api";
 import { siteConfig } from "@/lib/config";
 
+// Rendered per request (not prerendered at build time, when the backend may not
+// exist yet). The API data underneath is cached by fetch for 30s and cleared by
+// the admin app's revalidate ping.
+export const dynamic = "force-dynamic";
+
 /**
  * Generates /sitemap.xml. Pulls a bounded number of the most recent
  * published videos rather than the entire catalog to keep this fast;

@@ -1,13 +1,10 @@
 import { NextRequest } from "next/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth";
+import { deleteCategory, isUniqueViolation, updateCategory } from "@/lib/db";
 import { jsonOk, jsonError, handleApiError } from "@/lib/api-response";
 import { updateCategorySchema, slugify } from "@/lib/validation";
 import type { Category } from "@/lib/types";
-import type { Database } from "@/lib/supabase/database.types";
 import { revalidateFrontend } from "@/lib/revalidate-frontend";
-
-type CategoryUpdate = Database["public"]["Tables"]["categories"]["Update"];
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -20,25 +17,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { id } = await params;
     const body = updateCategorySchema.parse(await request.json());
 
-    const patch: CategoryUpdate = { ...body };
-    if (body.name) patch.slug = slugify(body.name);
+    const patch = { ...body, ...(body.name ? { slug: slugify(body.name) } : {}) };
 
-    const admin = createSupabaseAdminClient();
-    const { data, error } = await admin
-      .from("categories")
-      .update(patch)
-      .eq("id", id)
-      .select("*")
-      .maybeSingle();
-
-    if (error) {
-      if (error.code === "23505") return jsonError("A category with this name already exists.", 409);
+    let category: Category | null;
+    try {
+      category = await updateCategory(id, patch);
+    } catch (error) {
+      if (isUniqueViolation(error)) return jsonError("A category with this name already exists.", 409);
       throw error;
     }
-    if (!data) return jsonError("Category not found.", 404);
+    if (!category) return jsonError("Category not found.", 404);
 
     await revalidateFrontend(["categories", "videos", "photos"]);
-    return jsonOk<Category>(data as unknown as Category);
+    return jsonOk<Category>(category);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);
     return handleApiError(error);
@@ -47,17 +38,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 /**
  * DELETE /api/categories/:id — admin only.
- * Videos referencing this category have `category_id` set to NULL
- * (see the `on delete set null` foreign key) rather than being deleted.
+ * Videos and photos referencing this category have `category_id` set to
+ * NULL (see the `ON DELETE SET NULL` foreign key) rather than being deleted.
  */
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
     await requireAdmin();
     const { id } = await params;
 
-    const admin = createSupabaseAdminClient();
-    const { error } = await admin.from("categories").delete().eq("id", id);
-    if (error) throw error;
+    await deleteCategory(id);
 
     await revalidateFrontend(["categories", "videos", "photos"]);
     return jsonOk({ success: true });

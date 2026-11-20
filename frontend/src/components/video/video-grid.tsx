@@ -18,7 +18,7 @@ interface VideoGridProps {
  * Renders the initial (server-fetched) page of videos, then loads
  * additional pages client-side as the user scrolls near the bottom
  * (infinite scroll), falling back to an explicit "Load more" button.
- * Each page is a small, indexed Supabase query
+ * Each page is a small, indexed D1 query
  * (`GET /api/videos?page=n&limit=24`) — we never fetch the whole table.
  */
 export function VideoGrid({ initialResult, params }: VideoGridProps) {

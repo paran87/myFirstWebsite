@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, tryGetAdmin } from "@/lib/auth";
+import { getContent, hardDeleteContent, softDeleteContent, updateContent } from "@/lib/db";
 import { jsonOk, jsonError, handleApiError } from "@/lib/api-response";
 import { updatePhotoSchema } from "@/lib/validation";
 import type { Photo } from "@/lib/types";
 import { corsHeaders, corsPreflight } from "@/lib/cors";
 import { uploadConfig } from "@/lib/config";
+import { deleteObject } from "@/lib/storage";
 import { revalidateFrontend } from "@/lib/revalidate-frontend";
 
 interface Params {
@@ -21,18 +21,11 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const admin = await tryGetAdmin();
-    const supabase = admin ? createSupabaseAdminClient() : await createSupabaseServerClient();
 
-    let builder = supabase.from("photos").select("*, category:categories(*)").eq("id", id);
-    if (!admin) {
-      builder = builder.eq("status", "published").is("deleted_at", null);
-    }
+    const photo = await getContent<Photo>("photos", id, Boolean(admin));
+    if (!photo) return jsonError("Photo not found.", 404);
 
-    const { data, error } = await builder.maybeSingle();
-    if (error) throw error;
-    if (!data) return jsonError("Photo not found.", 404);
-
-    return jsonOk<Photo>(data as unknown as Photo, { headers: corsHeaders(request) });
+    return jsonOk<Photo>(photo, { headers: corsHeaders(request) });
   } catch (error) {
     return handleApiError(error);
   }
@@ -44,14 +37,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { id } = await params;
     const body = updatePhotoSchema.parse(await request.json());
 
-    const admin = createSupabaseAdminClient();
-    const { data, error } = await admin.from("photos").update(body).eq("id", id).select("*").maybeSingle();
-
-    if (error) throw error;
-    if (!data) return jsonError("Photo not found.", 404);
+    const photo = await updateContent<Photo>("photos", id, body);
+    if (!photo) return jsonError("Photo not found.", 404);
 
     await revalidateFrontend(["photos", `photo:${id}`]);
-    return jsonOk<Photo>(data as unknown as Photo);
+    return jsonOk<Photo>(photo);
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);
     return handleApiError(error);
@@ -64,37 +54,17 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const { id } = await params;
     const permanent = request.nextUrl.searchParams.get("permanent") === "true";
 
-    const admin = createSupabaseAdminClient();
-
     if (!permanent) {
-      const { data, error } = await admin
-        .from("photos")
-        .update({ deleted_at: new Date().toISOString(), status: "deleted" })
-        .eq("id", id)
-        .select("id")
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!data) return jsonError("Photo not found.", 404);
+      if (!(await softDeleteContent("photos", id))) return jsonError("Photo not found.", 404);
 
       await revalidateFrontend(["photos", `photo:${id}`]);
       return jsonOk({ success: true, mode: "soft" });
     }
 
-    const { data: photo, error: fetchError } = await admin
-      .from("photos")
-      .select("storage_path")
-      .eq("id", id)
-      .maybeSingle();
-    if (fetchError) throw fetchError;
-    if (!photo) return jsonError("Photo not found.", 404);
+    const removed = await hardDeleteContent("photos", id);
+    if (!removed) return jsonError("Photo not found.", 404);
 
-    if (photo.storage_path) {
-      await admin.storage.from(uploadConfig.photoBucket).remove([photo.storage_path]);
-    }
-
-    const { error: deleteError } = await admin.from("photos").delete().eq("id", id);
-    if (deleteError) throw deleteError;
+    await deleteObject(uploadConfig.photoBucket, removed.storage_path as string | null);
 
     await revalidateFrontend(["photos", `photo:${id}`]);
     return jsonOk({ success: true, mode: "permanent" });

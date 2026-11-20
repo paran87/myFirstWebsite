@@ -1,4 +1,5 @@
 import "server-only";
+import { setting } from "@/lib/cf";
 
 /**
  * Tells the public site to drop its cached copies of the given data so an
@@ -9,8 +10,8 @@ import "server-only";
  * its normal ~30s schedule.
  */
 export async function revalidateFrontend(tags: string[]): Promise<void> {
-  const secret = process.env.REVALIDATE_SECRET;
-  const base = (process.env.FRONTEND_URL || (process.env.ALLOWED_FRONTEND_ORIGINS ?? "").split(",")[0] || "").trim();
+  const secret = setting("REVALIDATE_SECRET");
+  const base = (setting("FRONTEND_URL") || setting("ALLOWED_FRONTEND_ORIGINS").split(",")[0] || "").trim();
   if (!secret || !base || tags.length === 0) return;
 
   try {

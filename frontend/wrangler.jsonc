@@ -1,0 +1,49 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wmm-site",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": { "enabled": true },
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // next/image resizing (Cloudflare Images). Without this binding images are
+  // served unoptimized.
+  "images": { "binding": "IMAGES" },
+
+  // Next.js data cache. The admin app pings /api/revalidate after every change;
+  // that clears the tags recorded here.
+  //   npx wrangler r2 bucket create wmm-cache
+  //   npx wrangler d1 create wmm-cache     (paste the printed id below, then
+  //   run `npm run db:migrate:remote`)
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "wmm-cache"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "wmm-cache",
+      "database_id": "REPLACE_WITH_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Non-secret settings. The secret REVALIDATE_SECRET is set with
+  // `npx wrangler secret put REVALIDATE_SECRET` (see .dev.vars.example).
+  // NEXT_PUBLIC_* values are inlined at BUILD time: set them as build
+  // variables in the Cloudflare dashboard (or in .env.production) as well.
+  "vars": {
+    "NEXT_PUBLIC_SITE_NAME": "Walk Metro Manila",
+    "NEXT_PUBLIC_SITE_URL": "https://your-site.example.com",
+    "NEXT_PUBLIC_ADMIN_URL": "https://admin.example.com",
+    "NEXT_PUBLIC_API_URL": "https://admin.example.com/api",
+    "NEXT_PUBLIC_MEDIA_URL": ""
+  }
+}

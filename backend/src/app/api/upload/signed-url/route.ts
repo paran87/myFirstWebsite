@@ -1,12 +1,11 @@
 import { NextRequest } from "next/server";
-import crypto from "node:crypto";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { jsonOk, jsonError, handleApiError } from "@/lib/api-response";
 import { uploadConfig } from "@/lib/config";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-import { z } from "zod";
 import { resolveThumbnailMimeType, resolveVideoMimeType } from "@/lib/mime";
+import { isPresignConfigured, presignUpload, publicFileUrl } from "@/lib/storage";
 
 const requestSchema = z.object({
   kind: z.enum(["video", "thumbnail"]),
@@ -18,34 +17,32 @@ const requestSchema = z.object({
 /**
  * POST /api/upload/signed-url
  *
- * Returns a short-lived, single-file Supabase Storage signed upload URL
- * (+ token) so the admin browser can upload the video/thumbnail binary
- * DIRECTLY to object storage — it never passes through this backend
- * server, which keeps large body-camera recordings off our compute
- * bandwidth entirely (see spec section 15/16).
+ * Returns a short-lived presigned R2 URL so the admin browser can PUT the
+ * binary DIRECTLY to R2. Large body-camera recordings never pass through the
+ * Worker (which caps request bodies at 100 MB). A single PUT supports files
+ * up to 5 GB, comfortably above the 2 GB app limit.
  *
- * The client uploads with:
- *   supabase.storage.from(bucket).uploadToSignedUrl(path, token, file)
- * using the PUBLIC anon key — the service role key never leaves the server.
+ * The browser must PUT with the `Content-Type` returned here, and the R2
+ * bucket needs a CORS rule allowing PUT from the admin origin (see r2-cors.json).
  *
- * For files larger than a few hundred MB in production, swap this for
- * Supabase's resumable (TUS) upload endpoint
- * (`https://<project>.supabase.co/storage/v1/upload/resumable`) using
- * `tus-js-client`, which supports chunked/resumable uploads with retry.
- * The response shape here (`path`, bucket name) is designed so that
- * swap only touches the admin upload widget, not the rest of the app.
+ * Responds 501 when the R2 S3 credentials are not configured; the admin UI
+ * then falls back to uploading through the Worker (small files only).
  */
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await requireAdmin();
 
     const { allowed } = rateLimit(`upload:${getClientIp(request)}:${userId}`, {
-      limit: 20,
+      limit: 200,
       windowMs: 60_000,
     });
     if (!allowed) return jsonError("Too many upload requests. Please slow down.", 429);
 
     const body = requestSchema.parse(await request.json());
+
+    if (!isPresignConfigured()) {
+      return jsonError("Direct R2 uploads are not configured.", 501, { code: "presign_not_configured" });
+    }
 
     const isVideo = body.kind === "video";
     const contentType = isVideo
@@ -53,9 +50,7 @@ export async function POST(request: NextRequest) {
       : resolveThumbnailMimeType(body.fileName, body.contentType);
 
     const allowedTypes = isVideo ? uploadConfig.allowedVideoMimeTypes : uploadConfig.allowedThumbnailMimeTypes;
-    const maxBytes = isVideo
-      ? Math.max(uploadConfig.maxVideoSizeMb * 1024 * 1024, 2 * 1024 * 1024 * 1024)
-      : uploadConfig.maxThumbnailSizeMb * 1024 * 1024;
+    const maxBytes = (isVideo ? uploadConfig.maxVideoSizeMb : uploadConfig.maxThumbnailSizeMb) * 1024 * 1024;
     const bucket = isVideo ? uploadConfig.videoBucket : uploadConfig.thumbnailBucket;
 
     if (!allowedTypes.includes(contentType)) {
@@ -72,34 +67,15 @@ export async function POST(request: NextRequest) {
     }
 
     const safeExt = (body.fileName.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const uniquePath = `${new Date().getFullYear()}/${crypto.randomUUID()}.${safeExt}`;
-
-    const admin = createSupabaseAdminClient();
-    const { data, error } = await admin.storage.from(bucket).createSignedUploadUrl(uniquePath);
-    if (error) {
-      if (error.message?.toLowerCase().includes("bucket") || error.message?.toLowerCase().includes("not found")) {
-        return jsonError(
-          `Storage bucket "${bucket}" was not found. Run supabase/migrations/0002_storage.sql in the Supabase SQL Editor.`,
-          503
-        );
-      }
-      if (error.message?.includes("JWS") || error.message?.includes("JWT")) {
-        return jsonError(
-          "Invalid Supabase service role key. Copy the service_role secret (not the publishable key) into SUPABASE_SERVICE_ROLE_KEY in backend/.env.local and restart the backend.",
-          503
-        );
-      }
-      throw error;
-    }
-
-    const { data: publicUrlData } = admin.storage.from(bucket).getPublicUrl(uniquePath);
+    const path = `${new Date().getFullYear()}/${crypto.randomUUID()}.${safeExt}`;
 
     return jsonOk({
       bucket,
-      path: uniquePath,
-      token: data.token,
-      signedUrl: data.signedUrl,
-      publicUrl: publicUrlData.publicUrl,
+      path,
+      uploadUrl: await presignUpload(bucket, path, contentType),
+      method: "PUT",
+      contentType,
+      publicUrl: publicFileUrl(request.nextUrl.origin, bucket, path),
     });
   } catch (error) {
     if (error instanceof SyntaxError) return jsonError("Invalid JSON body.", 400);
