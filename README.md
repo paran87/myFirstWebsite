@@ -223,6 +223,10 @@ cd ../backend && npx wrangler secret put REVALIDATE_SECRET   # same value as the
 | Build command | `npx opennextjs-cloudflare build` | `npx opennextjs-cloudflare build` |
 | Deploy command | `npx opennextjs-cloudflare deploy` | `npx opennextjs-cloudflare deploy` |
 
+The `name` in each `wrangler.jsonc` must match the Worker's name in Cloudflare
+(`myfirstwebsite` = backend, `myfirstwebsite-frontend` = frontend); Workers Builds fails the
+build if they differ, and also if a `database_id` is still `REPLACE_WITH_DATABASE_ID`.
+
 `NEXT_PUBLIC_*` values are inlined at **build** time, so set them as *build variables*
 as well as in `wrangler.jsonc`. After deploying, add each Worker's custom domain under
 **Settings → Domains & Routes**.
