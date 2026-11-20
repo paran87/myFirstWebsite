@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { verifyAccessJwt } from "@/lib/access";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/admin-session";
 import { setting, settingList } from "@/lib/cf";
 import type { Profile } from "@/lib/types";
 
@@ -32,7 +33,7 @@ function profileFor(email: string): Profile {
  * admin's cookie (CSRF). Same-origin and non-browser requests have no
  * mismatching Origin header.
  */
-function isCrossOrigin(headerList: Headers): boolean {
+export function isCrossOrigin(headerList: Headers): boolean {
   const origin = headerList.get("origin");
   if (!origin) return false;
   const host = headerList.get("x-forwarded-host") || headerList.get("host");
@@ -61,12 +62,13 @@ function devBypassEmail(headerList: Headers): string {
 }
 
 /**
- * Verifies the caller was authenticated by Cloudflare Access and may use the
- * admin. Throws `UnauthorizedError` (no valid Access token) or
- * `ForbiddenError` (valid token, but the email is not on ADMIN_EMAILS).
+ * Verifies the caller is signed in to the admin: either with the built-in
+ * password login (signed session cookie) or through Cloudflare Access. Throws
+ * `UnauthorizedError` (no valid session) or `ForbiddenError` (valid Access
+ * token, but the email is not on ADMIN_EMAILS).
  *
- * Every admin-only API route must call this: the Access application only
- * guards `/admin*` pages, while `/api/*` also serves the public site.
+ * Every admin-only API route must call this: `/api/*` also serves the public
+ * site, so it cannot be fenced off by Access (or any proxy) as a whole.
  */
 export async function requireAdmin(): Promise<AdminSession> {
   const headerList = await headers();
@@ -78,6 +80,13 @@ export async function requireAdmin(): Promise<AdminSession> {
   if (bypass) return { userId: bypass, profile: profileFor(bypass) };
 
   const cookieStore = await cookies();
+
+  // Built-in password login (signed session cookie).
+  if (await verifySessionToken(cookieStore.get(SESSION_COOKIE)?.value)) {
+    return { userId: "admin", profile: profileFor("admin") };
+  }
+
+  // Cloudflare Access (when the site sits behind it).
   const token = headerList.get("cf-access-jwt-assertion") || cookieStore.get("CF_Authorization")?.value;
   if (!token) {
     throw new UnauthorizedError("You must be signed in to perform this action.");

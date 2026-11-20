@@ -1,8 +1,12 @@
 # Local development secrets for `next dev` / `wrangler dev`.
 # Copy to `.dev.vars` (git-ignored). In production use `wrangler secret put`.
 
-# Local-only admin bypass. Ignored when NODE_ENV=production.
-DEV_ADMIN_EMAIL=admin@example.com
+# Admin password for /admin/login (at least 12 characters). In production this is
+# a Worker secret: `wrangler secret put ADMIN_PASSWORD`.
+ADMIN_PASSWORD=change-me-to-a-long-password
+
+# Optional local shortcut that skips signing in under `next dev`. Ignored in production.
+# DEV_ADMIN_EMAIL=admin@example.com
 
 # Must equal the frontend's REVALIDATE_SECRET.
 REVALIDATE_SECRET=change-me-to-a-long-random-string

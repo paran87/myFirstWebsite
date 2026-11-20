@@ -31,12 +31,13 @@
     }
   ],
 
-  // Non-secret settings. Secrets go in with `npx wrangler secret put <NAME>`
-  // (see .dev.vars.example for the full list).
+  // Non-secret settings. Secrets (ADMIN_PASSWORD, REVALIDATE_SECRET, ...) go in with
+  // `npx wrangler secret put <NAME>` or the dashboard (see .dev.vars.example).
   "vars": {
     "NEXT_PUBLIC_SITE_NAME": "Walk Metro Manila",
 
-    // Cloudflare Access (Zero Trust → Access → Applications → this app).
+    // Optional Cloudflare Access (needs a custom domain). Leave as is to use the
+    // ADMIN_PASSWORD login instead.
     "ACCESS_TEAM_DOMAIN": "your-team.cloudflareaccess.com",
     "ACCESS_AUD": "",
     // Optional extra allow-list on top of the Access policy (comma-separated).

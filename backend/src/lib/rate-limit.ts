@@ -30,6 +30,9 @@ export function rateLimit(
 }
 
 export function getClientIp(request: Request): string {
+  // Set by Cloudflare itself and not forgeable by the client, unlike X-Forwarded-For.
+  const cloudflareIp = request.headers.get("cf-connecting-ip");
+  if (cloudflareIp) return cloudflareIp.trim();
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   return request.headers.get("x-real-ip") || "unknown";

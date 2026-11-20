@@ -14,18 +14,19 @@ export function AdminTopbar({
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  function handleLogout() {
-    // Cloudflare Access owns the session: its logout endpoint clears the
-    // cookie and returns to the Access login screen. It does not exist on
-    // localhost, where there is nothing to sign out of.
-    const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-    if (isLocal) {
-      router.push("/admin/login");
-      router.refresh();
+  async function handleLogout() {
+    // Clears the password-login cookie. Behind Cloudflare Access (no admin
+    // password) the response sends us to Access's own logout instead.
+    const response = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    const body = (await response?.json().catch(() => null)) as { redirect?: string } | null;
+    const target = body?.redirect ?? "/admin/login";
+
+    if (target.startsWith("/cdn-cgi/")) {
+      window.location.href = target;
       return;
     }
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Cloudflare path, not a Next.js page
-    window.location.href = "/cdn-cgi/access/logout";
+    router.push(target);
+    router.refresh();
   }
 
   return (

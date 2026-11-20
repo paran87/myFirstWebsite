@@ -486,3 +486,28 @@ export async function setPhotoGps(id: string, latitude: number, longitude: numbe
     .bind(latitude, longitude, id)
     .run();
 }
+
+// ---------------------------------------------------------------------
+// Admin login attempts
+// ---------------------------------------------------------------------
+
+export async function countRecentLoginFailures(ip: string, sinceIso: string): Promise<number> {
+  const row = await getDb()
+    .prepare("SELECT COUNT(*) AS n FROM login_attempts WHERE ip = ? AND attempted_at >= ?")
+    .bind(ip, sinceIso)
+    .first<{ n: number }>();
+  return Number(row?.n ?? 0);
+}
+
+export async function recordLoginFailure(ip: string): Promise<void> {
+  const db = getDb();
+  await db.batch([
+    db.prepare("INSERT INTO login_attempts (ip) VALUES (?)").bind(ip),
+    // Keep the table small: nothing older than a day is ever read.
+    db.prepare(`DELETE FROM login_attempts WHERE attempted_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')`),
+  ]);
+}
+
+export async function clearLoginFailures(ip: string): Promise<void> {
+  await getDb().prepare("DELETE FROM login_attempts WHERE ip = ?").bind(ip).run();
+}

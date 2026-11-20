@@ -5,7 +5,8 @@ body-camera footage and photos captured while walking streets and areas of **Met
 Manila** — for documentation, mapping, presentation, and reference.
 
 It runs **entirely on Cloudflare**: two Workers (public site + admin/API), a **D1**
-database, an **R2** bucket for media, and **Cloudflare Access** for admin sign-in.
+database, an **R2** bucket for media, and a built-in admin password login (optionally
+**Cloudflare Access** instead).
 There is no other backend service.
 
 ```text
@@ -23,7 +24,7 @@ project-root/
 ┌───────────────┐   REST (NEXT_PUBLIC_API_URL)  ┌─────────────────────────┐
 │   FRONTEND    │ ────────────────────────────► │   BACKEND (admin + API)  │
 │  Worker       │ ◄── POST /api/revalidate ──── │   Worker                 │
-│  cache: R2+D1 │                               │   ▲ Cloudflare Access    │
+│  cache: R2+D1 │                               │   ▲ admin password login │
 └───────────────┘                               │     guards /admin*       │
                                                 └─────┬──────────────┬─────┘
                                                       │              │
@@ -43,7 +44,7 @@ on the bucket).
 ## 1. Why two separate apps?
 
 - The public site and the admin panel are **separate applications** that deploy and
-  scale independently, and the admin app can sit behind Cloudflare Access.
+  scale independently.
 - The public bundle contains no admin code.
 - **Trade-off:** `frontend/src/lib/types.ts` and `backend/src/lib/types.ts` are
   hand-synced duplicates rather than a shared package.
@@ -59,7 +60,7 @@ on the bucket).
 | Hosting | Cloudflare Workers via [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) |
 | Database | Cloudflare **D1** (SQLite) — full-text search with FTS5 |
 | Media storage | Cloudflare **R2** |
-| Admin auth | Cloudflare **Access** (JWT verified inside the Worker) |
+| Admin auth | Shared admin password + signed session cookie; or Cloudflare **Access** (JWT verified inside the Worker) |
 | Site cache | R2 (incremental cache) + D1 (tag revalidation) for the frontend |
 | Image resizing | Cloudflare Images binding (`next/image`) |
 | Map | Leaflet + OpenStreetMap (`react-leaflet`) |
@@ -110,7 +111,8 @@ npm run dev
 - Public site: <http://localhost:3000>
 - Admin dashboard: <http://localhost:4000/admin/dashboard>
 
-There is no Cloudflare Access on localhost. Instead, when `DEV_ADMIN_EMAIL` is set,
+To try the admin locally you can set `ADMIN_PASSWORD` in `.dev.vars` and sign in at
+`/admin/login`, or, to skip signing in, set `DEV_ADMIN_EMAIL`: then
 `next dev` treats **same-origin browser requests** as that admin. Server-to-server calls
 (like the public site fetching the API) stay anonymous, so the public API behaves as in
 production. This bypass is disabled in any production build.
@@ -182,7 +184,33 @@ from the browser to R2:
 Without these, uploads up to ~90 MB still work through the Worker; bigger videos are
 refused with an explanatory message.
 
-### 5.4 Cloudflare Access for the admin
+### 5.4 Admin sign-in
+
+The admin uses **one shared password**. Set it as a secret on the **backend** Worker:
+Cloudflare dashboard → Workers & Pages → the backend Worker → **Settings → Variables and
+Secrets → Add → type *Secret***:
+
+| Name | Value |
+|---|---|
+| `ADMIN_PASSWORD` | A long, unique password (**at least 12 characters**; the login refuses shorter ones) |
+
+(or `npx wrangler secret put ADMIN_PASSWORD`). Then open `/admin/login` and sign in.
+
+- The session lasts 7 days (a signed, `HttpOnly`, `SameSite=Strict` cookie).
+- **Changing `ADMIN_PASSWORD` signs everyone out.** That is how you revoke access.
+- After **5 wrong passwords from one IP** the login is refused for 15 minutes (tracked
+  in D1, table `login_attempts`).
+- Use a password manager. There is no MFA, so the password is the only protection: pick
+  something long and don't reuse it.
+- Optional: set `ADMIN_SESSION_SECRET` (any long random string) to sign sessions with a
+  separate key.
+
+#### Optional: Cloudflare Access instead (needs a domain on Cloudflare)
+
+Access gives you real sign-in (email codes, Google, MFA) and no shared password, but it can
+only protect a path such as `/admin*` on a hostname in your own Cloudflare account, so it
+needs a custom domain. Enabling Access on a `workers.dev` address would protect the whole
+Worker, including the API the public site reads.
 
 1. **Zero Trust → Access → Applications → Add an application → Self-hosted.**
 2. Destinations: your admin hostname with path `admin` **and** `admin/*`
@@ -192,17 +220,15 @@ refused with an explanatory message.
 4. Copy the application's **Audience (AUD) tag** and your **team domain**
    (`<team>.cloudflareaccess.com`) into `backend/wrangler.jsonc` → `vars`:
    `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`. Optionally set `ADMIN_EMAILS` as an extra
-   allow-list.
+   allow-list. Then delete the `ADMIN_PASSWORD` secret to turn the password login off.
 
-How it works: Access signs people in and sets a `CF_Authorization` cookie. Every admin API
-route re-verifies that JWT inside the Worker (signature, issuer, audience, expiry), because
-the same `/api/*` paths also serve the public site and so can't be fenced off by Access.
+Access signs people in and sets a `CF_Authorization` cookie, and every admin API route
+re-verifies that JWT inside the Worker (signature, issuer, audience, expiry).
 
-> **Verify after deploy:** sign in at `/admin/dashboard`, then check that the admin lists
-> load data and a save succeeds. If the pages load but admin API calls return 401, the
-> browser is not sending the `CF_Authorization` cookie to `/api/*`. The fix is to move the
-> admin-only write endpoints under `/admin/api/*`, which the Access application already
-> covers (Access then also adds the `Cf-Access-Jwt-Assertion` header, which
+> **Not verified against a real Access account:** that the browser sends the
+> `CF_Authorization` cookie to `/api/*`. If the admin pages load but admin API calls return
+> 401, move the admin-only write endpoints under `/admin/api/*`, which the Access
+> application covers (Access then also adds the `Cf-Access-Jwt-Assertion` header, which
 > `requireAdmin()` reads).
 
 ### 5.5 Deploy
@@ -242,9 +268,11 @@ Non-secret settings live in `wrangler.jsonc` → `vars` (production) or `.env.lo
 
 | Name | Kind | Purpose |
 |---|---|---|
-| `ACCESS_TEAM_DOMAIN` | var | `<team>.cloudflareaccess.com` |
-| `ACCESS_AUD` | var | Audience tag of the Access application |
-| `ADMIN_EMAILS` | var, optional | Extra allow-list (comma-separated) |
+| `ADMIN_PASSWORD` | **secret** | The shared admin password (≥ 12 characters) |
+| `ADMIN_SESSION_SECRET` | **secret**, optional | Separate key for signing sessions |
+| `ACCESS_TEAM_DOMAIN` | var, Access only | `<team>.cloudflareaccess.com` |
+| `ACCESS_AUD` | var, Access only | Audience tag of the Access application |
+| `ADMIN_EMAILS` | var, Access only | Extra allow-list (comma-separated) |
 | `R2_PUBLIC_URL` | var, recommended | Public URL of the media bucket |
 | `R2_ACCOUNT_ID`, `R2_BUCKET_NAME` | var | For direct large-video uploads |
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | **secret** | For direct large-video uploads |
@@ -283,7 +311,7 @@ backend/
 └── src
     ├── app/
     │   ├── admin/
-    │   │   ├── login/page.tsx            # Access status page (sign-in is done by Access)
+    │   │   ├── login/page.tsx            # password sign-in form
     │   │   └── (app)/                    # dashboard, videos, photos, categories, recycle-bin
     │   └── api/
     │       ├── videos, photos            # list/create, [id] get/patch/delete, restore, view
@@ -296,7 +324,8 @@ backend/
         ├── cf.ts          # D1 / R2 bindings + settings
         ├── db.ts          # all SQL (videos, photos, categories, stats)
         ├── storage.ts     # R2 helpers + presigned URLs
-        ├── access.ts      # Cloudflare Access JWT verification
+        ├── admin-session.ts # password check + signed session cookie
+        ├── access.ts      # Cloudflare Access JWT verification (optional)
         ├── auth.ts        # requireAdmin() / tryGetAdmin()
         └── validation.ts  # Zod schemas
 
@@ -313,12 +342,11 @@ frontend/
 - **Public** (no sign-in): `GET /api/videos`, `/api/photos`, `/api/categories`
   (published, non-deleted rows only, reduced columns), `GET …/:id`,
   `POST /api/videos/:id/view`, `GET /api/files/*`.
-- **Admin**: everything else. `requireAdmin()` verifies the Cloudflare Access JWT on
-  every request, rejects requests whose `Origin` is a different site (CSRF), and
-  optionally enforces `ADMIN_EMAILS`.
-- There is no user table. The Access email is the user id and is stored in
-  `created_by`. Every Access-approved person is a full admin; manage who that is in the
-  Access policy.
+- **Admin**: everything else. `requireAdmin()` accepts a valid session cookie from the
+  password login (or a valid Cloudflare Access JWT), on every request, and rejects
+  requests whose `Origin` is a different site (CSRF).
+- There is no user table. With the password login, `created_by` is `admin`; with Access it
+  is the person's email. Everyone who can sign in is a full admin.
 - D1 has no row-level security, so **authorization lives only in the route handlers**.
   Any new route that writes data must call `requireAdmin()` first.
 
@@ -377,6 +405,11 @@ deployed):
   restore/permanent-delete, categories (incl. duplicate → 409), view de-duplication,
   photo batch insert, EXIF GPS backfill, R2 upload + `Range` responses, public vs admin
   visibility, CSRF rejection.
+- The password login was tested in `workerd` (production mode): wrong passwords, lockout
+  after 5 tries (even with the right password), session cookie accepted, and tampered /
+  forged / expired / wrong-key cookies refused. It also covered CSRF refusal, logout, and
+  sign-out of old sessions when the password changes. A too-short or unset password is
+  refused with a clear message.
 - Cloudflare Access JWT verification was run inside `workerd` with a generated key: a
   valid token is accepted; expired, wrong audience, wrong issuer, tampered, wrong-key,
   unknown-key, missing and malformed tokens are all rejected.
@@ -393,8 +426,11 @@ R2 + its CORS rule, the Images binding's resizing, and custom domains.
 
 | Symptom | Likely cause |
 |---|---|
-| `/admin/login` says it could not verify Access | `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` wrong, Access app does not cover `/admin*`, or the email is not in `ADMIN_EMAILS` |
-| Admin pages load but saving returns 401 | `CF_Authorization` not reaching `/api/*` (see §5.4) |
+| `/admin/login` says sign-in is not set up | The `ADMIN_PASSWORD` secret is missing on the backend Worker (§5.4) |
+| Login says "must be at least 12 characters" | `ADMIN_PASSWORD` is too short |
+| Login says "Too many failed attempts" | 5 wrong passwords from your IP; wait 15 minutes |
+| Signed out unexpectedly | `ADMIN_PASSWORD` (or `ADMIN_SESSION_SECRET`) was changed, or the 7-day session expired |
+| Admin pages load but saving returns 401 | Signed out (sign in again); with Access: `CF_Authorization` not reaching `/api/*` (see §5.4) |
 | `D1 binding "DB" is missing` | `d1_databases` in `wrangler.jsonc` (and `database_id`) |
 | Large video upload says R2 is not configured | Set the R2 secrets in §5.3 |
 | Large video upload fails with a network/CORS error | Apply `r2-cors.json` to the bucket (§5.3) |
@@ -414,6 +450,6 @@ R2 + its CORS rule, the Images binding's resizing, and custom domains.
 - **Subrequest limits.** A Free-plan Worker allows 50 subrequests per request; the GPS
   backfill processes 20 photos per call for that reason.
 - **Free-plan quotas** apply to D1, R2, Workers requests and Images transformations.
-- **All Access users are admins** (no editor/admin split).
+- **Everyone who can sign in is a full admin** (no editor/admin split), and the password login has no MFA.
 - No data was migrated from the previous Supabase version; the schema was translated by
   hand (`backend/migrations/`).
